@@ -23,6 +23,7 @@ export interface MissionLifetimeStats {
   fishCooked: number;
   shelterBuilt: boolean;
   shipwreckReturned: boolean;
+  relayInspected: boolean;
 }
 
 export interface MissionSaveState {
@@ -131,6 +132,14 @@ export class MissionManager {
       targetCount: 1,
       rewardText: 'Phase 3 Survival Mastered!',
       getEventCount: (s) => (s.shipwreckReturned ? 1 : 0)
+    },
+    {
+      id: 'investigate_relay',
+      title: 'Investigate the jungle radio signal',
+      description: 'Chapter 2 — Signals in the Canopy: Find the abandoned radio relay near LOC -40, -32 and inspect its emergency log.',
+      targetCount: 1,
+      rewardText: 'Recovered RELAY 04 evacuation warning and the next lead',
+      getEventCount: (s) => (s.relayInspected ? 1 : 0)
     }
   ];
 
@@ -148,7 +157,8 @@ export class MissionManager {
     campfireLit: false,
     fishCooked: 0,
     shelterBuilt: false,
-    shipwreckReturned: false
+    shipwreckReturned: false,
+    relayInspected: false
   };
   private completedIds: string[] = [];
 
@@ -242,6 +252,11 @@ export class MissionManager {
     this.checkCurrentMissionCompletion();
   }
 
+  public recordRelayInspected(): void {
+    this.stats.relayInspected = true;
+    this.checkCurrentMissionCompletion();
+  }
+
   public recordShipwreckReturned(): void {
     this.stats.shipwreckReturned = true;
     this.checkCurrentMissionCompletion();
@@ -315,7 +330,8 @@ export class MissionManager {
       campfireLit: false,
       fishCooked: 0,
       shelterBuilt: false,
-      shipwreckReturned: false
+      shipwreckReturned: false,
+    relayInspected: false
     };
     this.notifyProgress();
   }
