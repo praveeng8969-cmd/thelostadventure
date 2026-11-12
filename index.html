@@ -19,7 +19,7 @@
       <div class="hud-top-bar">
         <div class="hud-title-badge">
           <span class="hud-game-title">THE LOST ADVENTURE</span>
-          <span class="hud-version-tag">VERSION 0.1B</span>
+          <span class="hud-version-tag">VERSION 0.1C</span>
         </div>
         <div class="hud-mission-panel">
           <div class="hud-mission-label">CURRENT OBJECTIVE</div>
@@ -29,6 +29,19 @@
           <span id="hud-coords">LOC: 0, 0</span>
           <span id="hud-time">TIME: 12:00</span>
         </div>
+      </div>
+
+      <!-- Shelter Status Badge -->
+      <div id="hud-shelter-badge" class="hud-shelter-badge hidden">
+        🛡️ SHELTERED: WEATHER PROTECTED
+      </div>
+
+      <!-- Placement Mode HUD Helper -->
+      <div id="hud-placement-helper" class="hud-placement-helper hidden">
+        <div class="placement-title">PLACEMENT MODE</div>
+        <div class="control-row"><span class="key-pill">L-CLICK</span> Place Piece</div>
+        <div class="control-row"><span class="key-pill">R</span> Rotate (90°)</div>
+        <div class="control-row"><span class="key-pill">ESC</span> Cancel</div>
       </div>
 
       <!-- Mission Complete Banner (Top Center) -->
@@ -54,7 +67,8 @@
         <div class="control-row"><span class="key-pill">WASD</span> Move</div>
         <div class="control-row"><span class="key-pill">SHIFT</span> Sprint</div>
         <div class="control-row"><span class="key-pill">TAB</span> Inventory (16 Slots)</div>
-        <div class="control-row"><span class="key-pill">E</span> Interact / Collect</div>
+        <div class="control-row"><span class="key-pill">C</span> Crafting Menu</div>
+        <div class="control-row"><span class="key-pill">E</span> Interact / Collect / Cook</div>
         <div class="control-row"><span class="key-pill">ESC</span> Pause</div>
       </div>
 
@@ -116,12 +130,29 @@
       </div>
     </div>
 
+    <!-- Crafting Modal (C) -->
+    <div id="modal-crafting" class="modal-backdrop hidden">
+      <div class="modal-panel crafting-panel">
+        <div class="modal-header">
+          <h3>SURVIVOR CRAFTING (C)</h3>
+          <button class="modal-close" id="btn-close-crafting">&times;</button>
+        </div>
+        <div id="crafting-recipes-list" class="crafting-recipes-list">
+          <!-- Dynamically populated recipes -->
+        </div>
+        <div class="modal-footer crafting-footer">
+          <span class="inventory-hint"><span class="key-pill">C</span> or <span class="key-pill">ESC</span> to close</span>
+          <button class="btn btn-secondary" id="btn-crafting-close">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Menu Overlay -->
     <div id="main-menu" class="menu-overlay">
       <div class="menu-backdrop-glow"></div>
       <div class="menu-content">
         <div class="menu-header">
-          <div class="pre-title">SURVIVE &bullet; UNCOVER &bullet; ESCAPE</div>
+          <div class="pre-title">SURVIVE &bullet; CRAFT &bullet; BUILD &bullet; ESCAPE</div>
           <h1 class="game-logo">THE LOST ADVENTURE</h1>
           <p class="tagline">Stranded on an uncharted island. Can you survive the secrets lurking beneath?</p>
         </div>
@@ -142,7 +173,7 @@
         </div>
 
         <div class="menu-footer">
-          <span>v0.1B Survival & Missions Prototype</span> &bull;
+          <span>v0.1C Crafting, Cooking & Shelter Prototype</span> &bull;
           <span>Built with Three.js & Vite</span>
         </div>
       </div>
@@ -185,18 +216,26 @@
             </tr>
             <tr>
               <td><span class="key-pill">E</span></td>
-              <td>Collect resources (Wood, Stone, Coconut, Water) & inspect objects</td>
+              <td>Collect resources, catch fish, light campfire & cook</td>
             </tr>
             <tr>
               <td><span class="key-pill">TAB</span></td>
               <td>Open / Close 16-slot Survivor Inventory</td>
             </tr>
             <tr>
+              <td><span class="key-pill">C</span></td>
+              <td>Open / Close Crafting Workbench</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">R</span></td>
+              <td>Rotate building structure preview (90°)</td>
+            </tr>
+            <tr>
               <td><span class="key-pill">ESC</span></td>
-              <td>Pause Menu / Release cursor</td>
+              <td>Pause Menu / Cancel placement / Release cursor</td>
             </tr>
           </table>
-          <p class="modal-hint">Tip: Collect coconuts to replenish hunger (+20) and clean spring water to replenish thirst (+30) from your inventory.</p>
+          <p class="modal-hint">Tip: Equip a Stone Axe to gather bonus wood. Place a campfire and cook fish to restore hunger (+35). Build floors, walls, and a roof to achieve shelter protection.</p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-primary" id="btn-controls-ok">GOT IT</button>

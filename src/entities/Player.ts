@@ -10,6 +10,7 @@ export class Player {
   private rightLegGroup: THREE.Group;
   private backpack: THREE.Mesh;
 
+  private equippedAxeGroup: THREE.Group | null = null;
   private currentSpeed: number = 0;
   private walkCycle: number = 0;
 
@@ -125,6 +126,39 @@ export class Player {
     scene.add(this.mesh);
   }
 
+  public setEquippedTool(tool: 'stone_axe' | null): void {
+    if (this.equippedAxeGroup) {
+      this.rightArmGroup.remove(this.equippedAxeGroup);
+      this.equippedAxeGroup = null;
+    }
+
+    if (tool === 'stone_axe') {
+      const axe = new THREE.Group();
+
+      // Wooden handle
+      const handleMat = new THREE.MeshStandardMaterial({ color: 0x78532f, roughness: 0.85 });
+      const handleGeo = new THREE.CylinderGeometry(0.04, 0.045, 0.7, 6);
+      const handleMesh = new THREE.Mesh(handleGeo, handleMat);
+      handleMesh.position.set(0, -0.2, 0.15);
+      handleMesh.rotation.x = Math.PI / 4;
+      handleMesh.castShadow = true;
+      axe.add(handleMesh);
+
+      // Stone head
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x4a4742, roughness: 0.7, flatShading: true });
+      const stoneGeo = new THREE.BoxGeometry(0.12, 0.18, 0.24);
+      const stoneMesh = new THREE.Mesh(stoneGeo, stoneMat);
+      stoneMesh.position.set(0, -0.05, 0.32);
+      stoneMesh.rotation.x = Math.PI / 4;
+      stoneMesh.castShadow = true;
+      axe.add(stoneMesh);
+
+      axe.position.set(0, -0.6, 0);
+      this.equippedAxeGroup = axe;
+      this.rightArmGroup.add(axe);
+    }
+  }
+
   public updateAnimation(deltaTime: number, speed: number, isSprinting: boolean): void {
     this.currentSpeed = THREE.MathUtils.lerp(this.currentSpeed, speed, 0.15);
 
@@ -164,4 +198,3 @@ export class Player {
     return this.mesh.position;
   }
 }
-

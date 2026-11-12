@@ -28,6 +28,9 @@ export class CharacterController {
   private starvationDamageTimer: number = 0;
   private onMoveDistanceCallback: ((dist: number) => void) | null = null;
 
+  public equippedTool: 'stone_axe' | null = null;
+  public isSheltered: boolean = false;
+
   public stats: PlayerStats = {
     health: 100,
     hunger: 100,
@@ -51,6 +54,12 @@ export class CharacterController {
 
   public setOnMoveDistance(cb: (dist: number) => void): void {
     this.onMoveDistanceCallback = cb;
+  }
+
+  public equipTool(tool: 'stone_axe' | null): void {
+    this.equippedTool = tool;
+    this.player.setEquippedTool(tool);
+    soundManager.playInteract();
   }
 
   public spawnOnBeach(): void {
@@ -190,6 +199,16 @@ export class CharacterController {
       this.stats.hunger = Math.min(100, this.stats.hunger + restore);
       soundManager.playInteract();
       return { success: true, message: `Ate Coconut (+${restore} Hunger)` };
+    }
+
+    if (type === 'cooked_fish') {
+      if (this.stats.hunger >= 100) {
+        return { success: false, message: 'Hunger is already full!' };
+      }
+      const restore = 35;
+      this.stats.hunger = Math.min(100, this.stats.hunger + restore);
+      soundManager.playInteract();
+      return { success: true, message: `Ate Grilled Fish (+${restore} Hunger)` };
     }
 
     if (type === 'water') {

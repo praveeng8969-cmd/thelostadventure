@@ -1,8 +1,11 @@
+import { ResourceType } from '../inventory/Item';
+
 export interface MissionDefinition {
   id: string;
   title: string;
   description: string;
   targetCount: number;
+  rewardText?: string;
   getEventCount: (stats: MissionLifetimeStats) => number;
 }
 
@@ -14,6 +17,12 @@ export interface MissionLifetimeStats {
   coconutsCollected: number;
   waterCollected: number;
   shipwreckInspected: boolean;
+  stoneAxeCrafted: number;
+  campfireCrafted: number;
+  campfireLit: boolean;
+  fishCooked: number;
+  shelterBuilt: boolean;
+  shipwreckReturned: boolean;
 }
 
 export interface MissionSaveState {
@@ -24,18 +33,21 @@ export interface MissionSaveState {
 
 export class MissionManager {
   private missions: MissionDefinition[] = [
+    // Phase 2 Introductory Missions (Preserved)
     {
       id: 'explore_beach',
       title: 'Explore the beach',
       description: 'Survey the coastal shoreline where you washed ashore.',
       targetCount: 1,
+      rewardText: 'Discovered driftwood & beach materials',
       getEventCount: (s) => (s.beachExplored ? 1 : 0)
     },
     {
       id: 'collect_wood',
       title: 'Collect 5 wood',
-      description: 'Gather driftwood along the beach.',
+      description: 'Gather driftwood branches along the beach.',
       targetCount: 5,
+      rewardText: 'Wood stock gathered',
       getEventCount: (s) => s.woodCollected
     },
     {
@@ -43,6 +55,7 @@ export class MissionManager {
       title: 'Collect 3 stones',
       description: 'Collect small stones scattered along the shore.',
       targetCount: 3,
+      rewardText: 'Stone stock gathered',
       getEventCount: (s) => s.stonesCollected
     },
     {
@@ -50,6 +63,7 @@ export class MissionManager {
       title: 'Find 2 coconuts',
       description: 'Search underneath coastal palm trees for fallen coconuts.',
       targetCount: 2,
+      rewardText: 'Emergency food secured',
       getEventCount: (s) => s.coconutsCollected
     },
     {
@@ -57,6 +71,7 @@ export class MissionManager {
       title: 'Collect drinking water',
       description: 'Locate the natural freshwater spring in the rocky glade.',
       targetCount: 1,
+      rewardText: 'Fresh water source discovered',
       getEventCount: (s) => s.waterCollected
     },
     {
@@ -64,7 +79,58 @@ export class MissionManager {
       title: 'Inspect the damaged ship',
       description: 'Approach your shipwreck and search the emergency survival cache.',
       targetCount: 1,
+      rewardText: 'Retrieved emergency supplies & blueprints',
       getEventCount: (s) => (s.shipwreckInspected ? 1 : 0)
+    },
+
+    // Phase 3 Missions
+    {
+      id: 'craft_stone_axe',
+      title: 'Craft a stone axe',
+      description: 'Press C to open crafting. Combine 3 Wood + 2 Stone to craft a Stone Axe.',
+      targetCount: 1,
+      rewardText: 'Unlocked efficient wood harvesting',
+      getEventCount: (s) => s.stoneAxeCrafted
+    },
+    {
+      id: 'craft_campfire',
+      title: 'Craft a campfire',
+      description: 'Craft a Campfire using 5 Wood + 4 Stone in the crafting menu (C).',
+      targetCount: 1,
+      rewardText: 'Campfire ready to place',
+      getEventCount: (s) => s.campfireCrafted
+    },
+    {
+      id: 'light_campfire',
+      title: 'Place and light the campfire',
+      description: 'Open inventory (Tab), select Campfire and Place it on dry ground, then press E to light it.',
+      targetCount: 1,
+      rewardText: 'Warmth secured! Cooking unlocked',
+      getEventCount: (s) => (s.campfireLit ? 1 : 0)
+    },
+    {
+      id: 'cook_fish',
+      title: 'Cook one fish',
+      description: 'Catch raw fish at the shoreline fishing spot (LOC 45, 45) and cook it at your lit campfire.',
+      targetCount: 1,
+      rewardText: 'Delicious meal! Building recipes unlocked',
+      getEventCount: (s) => s.fishCooked
+    },
+    {
+      id: 'build_shelter',
+      title: 'Build a basic shelter',
+      description: 'Craft and place a wooden floor, walls around it, and a roof on top to form an enclosed shelter.',
+      targetCount: 1,
+      rewardText: 'Shelter Complete! Weather protection active',
+      getEventCount: (s) => (s.shelterBuilt ? 1 : 0)
+    },
+    {
+      id: 'return_shipwreck',
+      title: 'Return to the shipwreck',
+      description: 'Head back to the expedition vessel to prepare for deeper island exploration.',
+      targetCount: 1,
+      rewardText: 'Phase 3 Survival Mastered!',
+      getEventCount: (s) => (s.shipwreckReturned ? 1 : 0)
     }
   ];
 
@@ -76,7 +142,13 @@ export class MissionManager {
     stonesCollected: 0,
     coconutsCollected: 0,
     waterCollected: 0,
-    shipwreckInspected: false
+    shipwreckInspected: false,
+    stoneAxeCrafted: 0,
+    campfireCrafted: 0,
+    campfireLit: false,
+    fishCooked: 0,
+    shelterBuilt: false,
+    shipwreckReturned: false
   };
   private completedIds: string[] = [];
 
@@ -101,7 +173,7 @@ export class MissionManager {
   public getCurrentMissionText(): string {
     const current = this.getCurrentMission();
     if (!current) {
-      return 'All introductory objectives complete! Island survival secured.';
+      return 'All island objectives complete! You are ready to explore the mystery inland.';
     }
 
     if (current.targetCount > 1) {
@@ -126,7 +198,7 @@ export class MissionManager {
     }
   }
 
-  public recordResourceCollected(type: 'wood' | 'stone' | 'coconut' | 'water'): void {
+  public recordResourceCollected(type: ResourceType | string): void {
     if (type === 'wood') this.stats.woodCollected++;
     else if (type === 'stone') this.stats.stonesCollected++;
     else if (type === 'coconut') this.stats.coconutsCollected++;
@@ -137,6 +209,41 @@ export class MissionManager {
 
   public recordShipwreckInspected(): void {
     this.stats.shipwreckInspected = true;
+    this.checkCurrentMissionCompletion();
+
+    // If on mission 'return_shipwreck', complete that too
+    if (this.currentIndex >= 11) {
+      this.stats.shipwreckReturned = true;
+      this.checkCurrentMissionCompletion();
+    }
+  }
+
+  public recordCraftItem(resultType: string): void {
+    if (resultType === 'stone_axe') {
+      this.stats.stoneAxeCrafted++;
+    } else if (resultType === 'campfire') {
+      this.stats.campfireCrafted++;
+    }
+    this.checkCurrentMissionCompletion();
+  }
+
+  public recordCampfireLit(): void {
+    this.stats.campfireLit = true;
+    this.checkCurrentMissionCompletion();
+  }
+
+  public recordFishCooked(): void {
+    this.stats.fishCooked++;
+    this.checkCurrentMissionCompletion();
+  }
+
+  public recordShelterBuilt(): void {
+    this.stats.shelterBuilt = true;
+    this.checkCurrentMissionCompletion();
+  }
+
+  public recordShipwreckReturned(): void {
+    this.stats.shipwreckReturned = true;
     this.checkCurrentMissionCompletion();
   }
 
@@ -165,7 +272,6 @@ export class MissionManager {
 
       // Check if the next mission was already satisfied by prior gameplay events
       if (nextMission && nextMission.getEventCount(this.stats) >= nextMission.targetCount) {
-        // Automatically cascade completion
         setTimeout(() => {
           this.checkCurrentMissionCompletion();
         }, 800);
@@ -203,9 +309,14 @@ export class MissionManager {
       stonesCollected: 0,
       coconutsCollected: 0,
       waterCollected: 0,
-      shipwreckInspected: false
+      shipwreckInspected: false,
+      stoneAxeCrafted: 0,
+      campfireCrafted: 0,
+      campfireLit: false,
+      fishCooked: 0,
+      shelterBuilt: false,
+      shipwreckReturned: false
     };
     this.notifyProgress();
   }
 }
-

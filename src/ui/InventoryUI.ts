@@ -11,7 +11,11 @@ export class InventoryUI {
   private inventory: Inventory;
 
   private selectedSlotIndex: number | null = null;
+  private currentlyEquippedTool: 'stone_axe' | null = null;
+
   private onUseItemCallback: ((type: ResourceType, slotIndex: number) => void) | null = null;
+  private onEquipToolCallback: ((tool: 'stone_axe' | null) => void) | null = null;
+  private onStartPlacementCallback: ((itemType: ResourceType) => void) | null = null;
   private onCloseCallback: (() => void) | null = null;
 
   constructor(inventory: Inventory) {
@@ -35,12 +39,32 @@ export class InventoryUI {
   }
 
   private setupListeners(): void {
-    this.btnClose.addEventListener('click', () => this.close());
-    this.btnFooterClose.addEventListener('click', () => this.close());
+    if (this.btnClose) {
+      this.btnClose.addEventListener('click', () => this.close());
+    }
+    if (this.btnFooterClose) {
+      this.btnFooterClose.addEventListener('click', () => this.close());
+    }
+  }
+
+  public setEquippedTool(tool: 'stone_axe' | null): void {
+    this.currentlyEquippedTool = tool;
+    this.render();
+    if (this.selectedSlotIndex !== null) {
+      this.renderDetails(this.selectedSlotIndex);
+    }
   }
 
   public setOnUseItem(cb: (type: ResourceType, slotIndex: number) => void): void {
     this.onUseItemCallback = cb;
+  }
+
+  public setOnEquipTool(cb: (tool: 'stone_axe' | null) => void): void {
+    this.onEquipToolCallback = cb;
+  }
+
+  public setOnStartPlacement(cb: (itemType: ResourceType) => void): void {
+    this.onStartPlacementCallback = cb;
   }
 
   public setOnClose(cb: () => void): void {
@@ -95,11 +119,15 @@ export class InventoryUI {
 
       if (slot) {
         const def = ITEM_DEFINITIONS[slot.itemType];
+        const isEquipped = slot.itemType === this.currentlyEquippedTool;
         slotEl.innerHTML = `
           <div class="slot-icon">${def ? def.icon : '📦'}</div>
           <div class="slot-name">${def ? def.name : slot.itemType}</div>
-          <div class="slot-qty">x${slot.quantity}</div>
+          <div class="slot-qty">${isEquipped ? 'EQUIPPED' : 'x' + slot.quantity}</div>
         `;
+        if (isEquipped) {
+          slotEl.classList.add('equipped');
+        }
       } else {
         slotEl.innerHTML = `<div class="slot-empty-num">${i + 1}</div>`;
       }
@@ -131,6 +159,13 @@ export class InventoryUI {
     let actionBtnHtml = '';
     if (def.isConsumable) {
       actionBtnHtml = `<button id="btn-use-item" class="btn btn-primary btn-sm">USE (EAT / DRINK)</button>`;
+    } else if (def.isEquipable) {
+      const isEquipped = slot.itemType === this.currentlyEquippedTool;
+      actionBtnHtml = `<button id="btn-equip-item" class="btn btn-primary btn-sm">${
+        isEquipped ? 'UNEQUIP' : 'EQUIP TOOL'
+      }</button>`;
+    } else if (def.isPlaceable) {
+      actionBtnHtml = `<button id="btn-place-item" class="btn btn-primary btn-sm">PLACE / BUILD</button>`;
     }
 
     this.detailsEl.innerHTML = `
@@ -160,10 +195,39 @@ export class InventoryUI {
       });
     }
 
+    const equipBtn = document.getElementById('btn-equip-item');
+    if (equipBtn) {
+      equipBtn.addEventListener('click', () => {
+        soundManager.playClick();
+        const isEquipped = slot.itemType === this.currentlyEquippedTool;
+        const newTool = isEquipped ? null : (slot.itemType as 'stone_axe');
+        if (this.onEquipToolCallback) {
+          this.onEquipToolCallback(newTool);
+        }
+      });
+    }
+
+    const placeBtn = document.getElementById('btn-place-item');
+    if (placeBtn) {
+      placeBtn.addEventListener('click', () => {
+        soundManager.playClick();
+        this.close();
+        if (this.onStartPlacementCallback) {
+          this.onStartPlacementCallback(slot.itemType);
+        }
+      });
+    }
+
     const dropBtn = document.getElementById('btn-drop-item');
     if (dropBtn) {
       dropBtn.addEventListener('click', () => {
         soundManager.playClick();
+        // If dropping the currently equipped tool, unequip it
+        if (slot.itemType === this.currentlyEquippedTool) {
+          if (this.onEquipToolCallback) {
+            this.onEquipToolCallback(null);
+          }
+        }
         this.inventory.removeAtSlot(index, 1);
         const updated = this.inventory.getSlotAt(index);
         if (!updated) {
@@ -173,4 +237,3 @@ export class InventoryUI {
     }
   }
 }
-

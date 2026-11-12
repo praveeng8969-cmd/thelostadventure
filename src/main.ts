@@ -6,16 +6,22 @@ import { Foliage } from './world/Foliage';
 import { Rocks } from './world/Rocks';
 import { Shipwreck } from './world/Shipwreck';
 import { CollectiblesManager } from './world/Collectibles';
+import { CampfireManager, CampfireInstance } from './world/Campfire';
+import { FishingSpot } from './fishing/FishingSpot';
 import { Player } from './entities/Player';
 import { ThirdPersonCamera } from './entities/ThirdPersonCamera';
 import { InputManager } from './core/InputManager';
 import { CharacterController } from './entities/CharacterController';
 import { Inventory } from './inventory/Inventory';
 import { InventoryUI } from './ui/InventoryUI';
+import { CraftingManager } from './crafting/Crafting';
+import { CraftingUI } from './ui/CraftingUI';
+import { BuildingManager } from './building/BuildingManager';
+import { StructureType } from './building/StructurePieces';
 import { MissionManager } from './missions/MissionManager';
 import { HUD } from './ui/HUD';
 import { MainMenu } from './ui/MainMenu';
-import { SaveSystem, GameSettings, SaveDataV2 } from './core/SaveSystem';
+import { SaveSystem, GameSettings, SaveDataV3 } from './core/SaveSystem';
 import { soundManager } from './core/SoundManager';
 import { ResourceType } from './inventory/Item';
 import * as THREE from 'three';
@@ -31,6 +37,8 @@ class GameApp {
   private rocks: Rocks;
   private shipwreck: Shipwreck;
   private collectiblesManager: CollectiblesManager;
+  private campfireManager: CampfireManager;
+  private fishingSpot: FishingSpot;
 
   private player: Player;
   private thirdPersonCamera: ThirdPersonCamera;
@@ -39,6 +47,9 @@ class GameApp {
 
   private inventory: Inventory;
   private inventoryUI: InventoryUI;
+  private craftingManager: CraftingManager;
+  private craftingUI: CraftingUI;
+  private buildingManager: BuildingManager;
   private missionManager: MissionManager;
 
   private hud: HUD;
@@ -60,6 +71,11 @@ class GameApp {
     this.rocks = new Rocks(this.engine.scene, this.island);
     this.shipwreck = new Shipwreck(this.engine.scene, this.island);
     this.collectiblesManager = new CollectiblesManager(this.engine.scene, this.island);
+    this.campfireManager = new CampfireManager(this.engine.scene);
+    this.fishingSpot = new FishingSpot(this.engine.scene, this.island);
+
+    // Initialize building manager
+    this.buildingManager = new BuildingManager(this.engine.scene, this.island, this.campfireManager);
 
     // Initialize player & controls
     this.player = new Player(this.engine.scene);
@@ -72,9 +88,11 @@ class GameApp {
       this.island
     );
 
-    // Initialize systems: Inventory, Missions, UI
+    // Initialize systems: Inventory, Crafting, Missions, UI
     this.inventory = new Inventory();
     this.inventoryUI = new InventoryUI(this.inventory);
+    this.craftingManager = new CraftingManager();
+    this.craftingUI = new CraftingUI(this.craftingManager, this.inventory);
     this.missionManager = new MissionManager();
     this.hud = new HUD();
     this.mainMenu = new MainMenu();
@@ -83,9 +101,14 @@ class GameApp {
     this.setupMissions();
     this.applyLoadedSettings();
 
-    // Re-lock pointer on canvas click if playing and inventory is not open
+    // Re-lock pointer on canvas click if playing and modals are closed
     canvas.addEventListener('click', () => {
-      if (this.state === 'PLAYING' && !this.inventoryUI.isOpen()) {
+      if (
+        this.state === 'PLAYING' &&
+        !this.inventoryUI.isOpen() &&
+        !this.craftingUI.isOpen() &&
+        !this.buildingManager.isPlacing()
+      ) {
         this.input.requestPointerLock();
       }
     });
@@ -103,6 +126,18 @@ class GameApp {
       onComplete: (completed, nextMission) => {
         soundManager.playInteract();
         this.hud.showMissionComplete(completed.title);
+
+        // Milestone recipe unlocks
+        if (completed.id === 'light_campfire') {
+          this.craftingManager.unlockCookingStation();
+          this.hud.showToast('Recipe Unlocked: Cooking Station!');
+        } else if (completed.id === 'cook_fish') {
+          this.craftingManager.unlockBuildingRecipes();
+          this.hud.showToast('Modular Building Unlocked: Wooden Floor, Wall & Roof!');
+        } else if (completed.id === 'build_shelter') {
+          this.hud.showToast('Shelter Complete! Weather protection activated.');
+        }
+
         if (nextMission) {
           this.hud.showToast(`New Objective: ${nextMission.title}`);
         }
@@ -112,6 +147,16 @@ class GameApp {
     // Track distance explored for beach mission
     this.controller.setOnMoveDistance((dist) => {
       this.missionManager.recordDistanceTraveled(dist);
+    });
+
+    // Track building shelter event
+    this.buildingManager.setCallbacks({
+      onShelterStatusChanged: (isComplete) => {
+        if (isComplete) {
+          this.missionManager.recordShelterBuilt();
+          this.hud.showToast('Shelter Complete! Fully enclosed foundation & roof detected.');
+        }
+      }
     });
   }
 
@@ -128,7 +173,7 @@ class GameApp {
 
     // Keyboard 'E' Interaction
     this.input.setOnInteract(() => {
-      if (this.state === 'PLAYING' && !this.inventoryUI.isOpen()) {
+      if (this.state === 'PLAYING' && !this.inventoryUI.isOpen() && !this.craftingUI.isOpen()) {
         this.handlePlayerInteraction();
       }
     });
@@ -136,23 +181,76 @@ class GameApp {
     // Keyboard TAB Inventory Toggle
     this.input.setOnInventoryToggle(() => {
       if (this.state === 'PLAYING') {
+        if (this.craftingUI.isOpen()) {
+          this.craftingUI.close();
+        }
         if (this.inventoryUI.isOpen()) {
           this.inventoryUI.close();
         } else {
+          if (this.buildingManager.isPlacing()) {
+            this.buildingManager.cancelPlacement();
+            this.hud.setPlacementMode(false);
+          }
           this.inventoryUI.open();
           this.input.exitPointerLock();
         }
       }
     });
 
+    // Keyboard 'C' Crafting Toggle
+    this.input.setOnCraftingToggle(() => {
+      if (this.state === 'PLAYING') {
+        if (this.inventoryUI.isOpen()) {
+          this.inventoryUI.close();
+        }
+        if (this.craftingUI.isOpen()) {
+          this.craftingUI.close();
+        } else {
+          if (this.buildingManager.isPlacing()) {
+            this.buildingManager.cancelPlacement();
+            this.hud.setPlacementMode(false);
+          }
+          this.craftingUI.open();
+          this.input.exitPointerLock();
+        }
+      }
+    });
+
+    // Keyboard 'R' Rotate Placement
+    this.input.setOnRotatePlacement(() => {
+      if (this.state === 'PLAYING' && this.buildingManager.isPlacing()) {
+        this.buildingManager.rotatePreview();
+      }
+    });
+
+    // Left Mouse Click Primary Action (Placement)
+    this.input.setOnPrimaryAction(() => {
+      if (this.state === 'PLAYING' && this.buildingManager.isPlacing()) {
+        this.handlePlacementClick();
+      }
+    });
+
     // When inventory closes by UI button
     this.inventoryUI.setOnClose(() => {
-      if (this.state === 'PLAYING') {
+      if (this.state === 'PLAYING' && !this.buildingManager.isPlacing()) {
         this.input.requestPointerLock();
       }
     });
 
-    // Inventory Item Consumption (Eat Coconut / Drink Water)
+    // When crafting closes by UI button
+    this.craftingUI.setOnClose(() => {
+      if (this.state === 'PLAYING' && !this.buildingManager.isPlacing()) {
+        this.input.requestPointerLock();
+      }
+    });
+
+    // Crafting callback
+    this.craftingUI.setOnCraft((recipe) => {
+      this.missionManager.recordCraftItem(recipe.resultType);
+      this.hud.showToast(`Crafted ${recipe.name}! Added to bag.`);
+    });
+
+    // Inventory Item Consumption (Eat Coconut / Drink Water / Eat Fish)
     this.inventoryUI.setOnUseItem((type: ResourceType, slotIndex: number) => {
       const result = this.controller.consume(type);
       if (result.success) {
@@ -163,10 +261,35 @@ class GameApp {
       }
     });
 
+    // Inventory Tool Equip
+    this.inventoryUI.setOnEquipTool((tool) => {
+      this.controller.equipTool(tool);
+      this.inventoryUI.setEquippedTool(tool);
+      if (tool) {
+        this.hud.showToast(`Equipped ${tool.replace('_', ' ')}! Wood harvesting doubled.`);
+      } else {
+        this.hud.showToast('Unequipped tool.');
+      }
+    });
+
+    // Inventory Structure Placement Trigger
+    this.inventoryUI.setOnStartPlacement((itemType) => {
+      this.buildingManager.startPlacement(itemType as StructureType);
+      this.hud.setPlacementMode(true);
+      this.input.requestPointerLock();
+      this.hud.showToast(`Placing ${itemType.replace('_', ' ')}. [L-Click] Place, [R] Rotate, [ESC] Cancel`);
+    });
+
     // Keyboard ESC Pause Handler
     this.input.setOnPauseToggle(() => {
       if (this.state === 'PLAYING') {
-        if (this.inventoryUI.isOpen()) {
+        if (this.buildingManager.isPlacing()) {
+          this.buildingManager.cancelPlacement();
+          this.hud.setPlacementMode(false);
+          this.hud.showToast('Placement cancelled.');
+        } else if (this.craftingUI.isOpen()) {
+          this.craftingUI.close();
+        } else if (this.inventoryUI.isOpen()) {
           this.inventoryUI.close();
         } else {
           this.pauseGame();
@@ -175,6 +298,28 @@ class GameApp {
         this.resumeGame();
       }
     });
+  }
+
+  private handlePlacementClick(): void {
+    const activeType = this.buildingManager.getActivePlacementType();
+    if (!activeType) return;
+
+    const result = this.buildingManager.placeCurrent();
+    if (result.success) {
+      // Deduct exactly 1 piece from inventory
+      this.inventory.removeItem(activeType, 1);
+      this.hud.showToast(result.message);
+
+      // Check if player still has pieces of this type
+      const remaining = this.inventory.getItemCount(activeType);
+      if (remaining <= 0) {
+        this.buildingManager.cancelPlacement();
+        this.hud.setPlacementMode(false);
+        this.hud.showToast(`Out of ${activeType.replace('_', ' ')}s!`);
+      }
+    } else {
+      this.hud.showToast(result.message);
+    }
   }
 
   private applyLoadedSettings(): void {
@@ -197,11 +342,20 @@ class GameApp {
       hunger: 100,
       thirst: 100
     };
+    this.controller.equipTool(null);
+    this.inventoryUI.setEquippedTool(null);
+
     this.inventory.clear();
+    this.craftingManager.resetToDefaults();
+    this.buildingManager.clear();
+    this.campfireManager.clear();
     this.collectiblesManager.resetAll();
     this.shipwreck.setSalvaged(false);
     this.missionManager.reset();
+
     this.hud.setMission(this.missionManager.getCurrentMissionText());
+    this.hud.setPlacementMode(false);
+    this.hud.setSheltered(false);
     this.gameTime = 0;
     this.state = 'PLAYING';
     this.hud.show();
@@ -218,11 +372,19 @@ class GameApp {
     soundManager.startOceanAmbience();
     this.controller.setPositionAndRotation(data.playerPosition, data.playerRotation);
     this.controller.stats = { ...data.stats };
+    this.controller.equipTool(data.equippedTool);
+    this.inventoryUI.setEquippedTool(data.equippedTool);
+
     this.inventory.deserialize(data.inventory);
+    this.craftingManager.deserialize(data.unlockedRecipes);
+    this.campfireManager.deserialize(data.campfires);
+    this.buildingManager.deserialize(data.placedStructures);
     this.collectiblesManager.restoreCollectedIds(data.collectedIds);
     this.shipwreck.setSalvaged(data.isShipwreckSalvaged);
     this.missionManager.deserialize(data.mission);
+
     this.hud.setMission(this.missionManager.getCurrentMissionText());
+    this.hud.setPlacementMode(false);
     this.gameTime = data.gameTime || 0;
     this.thirdPersonCamera.yaw = data.playerRotation;
 
@@ -244,7 +406,7 @@ class GameApp {
   }
 
   private saveGame(): void {
-    const data: Omit<SaveDataV2, 'version'> = {
+    const data: Omit<SaveDataV3, 'version'> = {
       playerPosition: {
         x: this.controller.position.x,
         y: this.controller.position.y,
@@ -253,6 +415,11 @@ class GameApp {
       playerRotation: this.controller.rotationY,
       stats: { ...this.controller.stats },
       inventory: this.inventory.serialize(),
+      equippedTool: this.controller.equippedTool,
+      unlockedRecipes: this.craftingManager.serialize(),
+      placedStructures: this.buildingManager.serialize(),
+      campfires: this.campfireManager.serialize(),
+      shelterComplete: this.buildingManager.isShelterComplete,
       mission: this.missionManager.serialize(),
       collectedIds: this.collectiblesManager.getCollectedIds(),
       isShipwreckSalvaged: this.shipwreck.isSalvaged,
@@ -264,15 +431,64 @@ class GameApp {
 
   private quitToMainMenu(): void {
     this.state = 'MENU';
-    if (this.inventoryUI.isOpen()) {
-      this.inventoryUI.close();
+    if (this.inventoryUI.isOpen()) this.inventoryUI.close();
+    if (this.craftingUI.isOpen()) this.craftingUI.close();
+    if (this.buildingManager.isPlacing()) {
+      this.buildingManager.cancelPlacement();
+      this.hud.setPlacementMode(false);
     }
     this.hud.hide();
     this.input.exitPointerLock();
   }
 
   private handlePlayerInteraction(): void {
-    // 1. Check for nearby world collectible resource
+    // 1. Check for Campfire interaction
+    const nearestCampfire = this.campfireManager.getNearestCampfire(this.controller.position, 3.2);
+    if (nearestCampfire) {
+      if (nearestCampfire.isCooking) {
+        this.hud.showToast(`Fish is cooking... ${Math.ceil(nearestCampfire.cookingTimer)}s remaining.`);
+        return;
+      }
+
+      if (nearestCampfire.isLit) {
+        // If player has raw fish, cook it!
+        if (this.inventory.getItemCount('raw_fish') > 0) {
+          this.inventory.removeItem('raw_fish', 1);
+          nearestCampfire.startCooking();
+          this.hud.showToast('Started grilling Raw Fish over the campfire (5s)...');
+          return;
+        } else {
+          // Extinguish campfire
+          nearestCampfire.extinguish();
+          this.hud.showToast('Extinguished campfire.');
+          return;
+        }
+      } else {
+        // Light campfire
+        nearestCampfire.light();
+        this.missionManager.recordCampfireLit();
+        this.hud.showToast('Lit campfire! Fire crackles with warmth and light.');
+        return;
+      }
+    }
+
+    // 2. Check for Shoreline Fishing Spot
+    if (this.fishingSpot.isPlayerNear(this.controller.position, 3.5)) {
+      if (!this.inventory.hasFreeSpace('raw_fish')) {
+        this.hud.showToast('Inventory full! Free a slot for fish.');
+        return;
+      }
+      const res = this.fishingSpot.catchFish();
+      if (res.success) {
+        this.inventory.addItem('raw_fish', 1);
+        this.hud.showToast(res.message);
+      } else {
+        this.hud.showToast(res.message);
+      }
+      return;
+    }
+
+    // 3. Check for nearby world collectible resource
     const nearestItem = this.collectiblesManager.getNearestCollectible(this.controller.position, 2.8);
     if (nearestItem) {
       if (!this.inventory.hasFreeSpace(nearestItem.type)) {
@@ -280,17 +496,26 @@ class GameApp {
         return;
       }
 
-      const res = this.inventory.addItem(nearestItem.type, 1);
+      // Stone axe yields bonus wood!
+      const countToAdd = (nearestItem.type === 'wood' && this.controller.equippedTool === 'stone_axe') ? 2 : 1;
+      const res = this.inventory.addItem(nearestItem.type, countToAdd);
+
       if (res.added > 0) {
         this.collectiblesManager.collectItem(nearestItem);
-        this.missionManager.recordResourceCollected(nearestItem.type);
+        for (let i = 0; i < res.added; i++) {
+          this.missionManager.recordResourceCollected(nearestItem.type);
+        }
         const resourceName = nearestItem.promptText.replace('Collect ', '');
-        this.hud.showToast(`Collected ${resourceName} (+1)`);
+        if (countToAdd > 1) {
+          this.hud.showToast(`Collected ${resourceName} (+${res.added}) [Axe Bonus!]`);
+        } else {
+          this.hud.showToast(`Collected ${resourceName} (+1)`);
+        }
       }
       return;
     }
 
-    // 2. Check for Shipwreck interaction
+    // 4. Check for Shipwreck interaction
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
       soundManager.playInteract();
@@ -301,14 +526,42 @@ class GameApp {
   }
 
   private checkProximityInteractions(): void {
-    // 1. Check for nearby collectible
+    if (this.buildingManager.isPlacing()) {
+      this.hud.hideInteractionPrompt();
+      return;
+    }
+
+    // 1. Campfire
+    const nearestCampfire = this.campfireManager.getNearestCampfire(this.controller.position, 3.2);
+    if (nearestCampfire) {
+      if (nearestCampfire.isCooking) {
+        this.hud.showInteractionPrompt(`Cooking Fish... (${Math.ceil(nearestCampfire.cookingTimer)}s)`);
+      } else if (nearestCampfire.isLit) {
+        if (this.inventory.getItemCount('raw_fish') > 0) {
+          this.hud.showInteractionPrompt('Cook Raw Fish');
+        } else {
+          this.hud.showInteractionPrompt('Extinguish Campfire');
+        }
+      } else {
+        this.hud.showInteractionPrompt('Light Campfire');
+      }
+      return;
+    }
+
+    // 2. Fishing Spot
+    if (this.fishingSpot.isPlayerNear(this.controller.position, 3.5)) {
+      this.hud.showInteractionPrompt('Catch Fish');
+      return;
+    }
+
+    // 3. World Collectibles
     const nearestItem = this.collectiblesManager.getNearestCollectible(this.controller.position, 2.8);
     if (nearestItem) {
       this.hud.showInteractionPrompt(nearestItem.promptText);
       return;
     }
 
-    // 2. Check for Shipwreck
+    // 4. Shipwreck
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
       if (!this.shipwreck.isSalvaged) {
@@ -331,6 +584,15 @@ class GameApp {
     // Update global environmental elements
     this.ocean.update(elapsedTime);
     this.atmosphere.update(elapsedTime);
+    this.fishingSpot.update(elapsedTime);
+
+    // Update campfires
+    const { finishedCampfire } = this.campfireManager.update(deltaTime);
+    if (finishedCampfire) {
+      this.inventory.addItem('cooked_fish', 1);
+      this.missionManager.recordFishCooked();
+      this.hud.showToast('Cooked Fish (+1)! Savory grilled fish ready in your inventory.');
+    }
 
     if (this.state === 'MENU') {
       // Cinematic camera orbit around island and shipwreck
@@ -341,13 +603,14 @@ class GameApp {
       const camY = Math.max(16, this.island.getHeightAt(camX, camZ) + 12);
 
       this.engine.camera.position.set(camX, camY, camZ);
-      this.engine.camera.lookAt(new THREE.Vector3(42, 4, 25)); // Focus on shipwreck
+      this.engine.camera.lookAt(new THREE.Vector3(42, 4, 25));
     } else if (this.state === 'PLAYING') {
-      // In-game time passage
       this.gameTime += deltaTime * 2.0;
 
-      // When inventory modal is open, prevent mouse look and character movement
-      if (!this.inventoryUI.isOpen()) {
+      // Handle UI modals
+      const isModalOpen = this.inventoryUI.isOpen() || this.craftingUI.isOpen();
+
+      if (!isModalOpen) {
         const mouseDeltas = this.input.consumeMouseDeltas();
         if (this.input.pointerLocked) {
           this.thirdPersonCamera.updateMouseLook(mouseDeltas.x, mouseDeltas.y);
@@ -355,13 +618,23 @@ class GameApp {
 
         // Update character movement, animation & survival decay
         this.controller.update(deltaTime);
+
+        // Update building preview if in placement mode
+        if (this.buildingManager.isPlacing()) {
+          const forward = this.thirdPersonCamera.getForwardVector();
+          this.buildingManager.updatePreview(this.controller.position, forward);
+        }
       } else {
-        // Discard mouse delta so camera doesn't jump after closing inventory
         this.input.consumeMouseDeltas();
       }
 
       // Follow camera
       this.thirdPersonCamera.update(this.controller.position, deltaTime);
+
+      // Shelter evaluation & weather protection flag
+      const isSheltered = this.buildingManager.checkPlayerInsideShelter(this.controller.position);
+      this.controller.isSheltered = isSheltered;
+      this.hud.setSheltered(isSheltered);
 
       // HUD updates
       this.hud.update(this.controller.stats, this.controller.position, this.gameTime);

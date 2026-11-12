@@ -18,6 +18,9 @@ export class HUD {
   private toastEl: HTMLElement;
   private missionBannerEl: HTMLElement;
   private missionBannerDesc: HTMLElement;
+  private shelterBadgeEl: HTMLElement;
+  private placementHelperEl: HTMLElement;
+
   private toastTimeout: number | null = null;
   private bannerTimeout: number | null = null;
 
@@ -40,6 +43,8 @@ export class HUD {
     this.toastEl = document.getElementById('hud-toast')!;
     this.missionBannerEl = document.getElementById('mission-complete-banner')!;
     this.missionBannerDesc = document.getElementById('mission-complete-desc')!;
+    this.shelterBadgeEl = document.getElementById('hud-shelter-badge')!;
+    this.placementHelperEl = document.getElementById('hud-placement-helper')!;
   }
 
   public show(): void {
@@ -95,6 +100,22 @@ export class HUD {
 
   public hideInteractionPrompt(): void {
     this.interactionPrompt.classList.add('hidden');
+  }
+
+  public setSheltered(isSheltered: boolean): void {
+    if (isSheltered) {
+      this.shelterBadgeEl.classList.remove('hidden');
+    } else {
+      this.shelterBadgeEl.classList.add('hidden');
+    }
+  }
+
+  public setPlacementMode(isPlacing: boolean): void {
+    if (isPlacing) {
+      this.placementHelperEl.classList.remove('hidden');
+    } else {
+      this.placementHelperEl.classList.add('hidden');
+    }
   }
 
   public showToast(msg: string): void {

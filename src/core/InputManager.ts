@@ -5,9 +5,13 @@ export class InputManager {
   private isPointerLocked: boolean = false;
   private sensitivityMultiplier: number = 1.0;
   private targetElement: HTMLElement;
+
   private onInteractCallback: (() => void) | null = null;
   private onPauseToggleCallback: (() => void) | null = null;
   private onInventoryToggleCallback: (() => void) | null = null;
+  private onCraftingToggleCallback: (() => void) | null = null;
+  private onRotatePlacementCallback: (() => void) | null = null;
+  private onPrimaryActionCallback: (() => void) | null = null;
 
   constructor(targetElement: HTMLElement) {
     this.targetElement = targetElement;
@@ -36,10 +40,30 @@ export class InputManager {
           this.onInventoryToggleCallback();
         }
       }
+
+      if (e.code === 'KeyC') {
+        if (this.onCraftingToggleCallback) {
+          this.onCraftingToggleCallback();
+        }
+      }
+
+      if (e.code === 'KeyR') {
+        if (this.onRotatePlacementCallback) {
+          this.onRotatePlacementCallback();
+        }
+      }
     });
 
     window.addEventListener('keyup', (e: KeyboardEvent) => {
       this.keys.set(e.code, false);
+    });
+
+    this.targetElement.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button === 0) {
+        if (this.onPrimaryActionCallback) {
+          this.onPrimaryActionCallback();
+        }
+      }
     });
 
     document.addEventListener('pointerlockchange', () => {
@@ -71,7 +95,6 @@ export class InputManager {
   }
 
   public setSensitivity(settingVal: number): void {
-    // settingVal between 1 and 10 -> map to sensitivity
     this.sensitivityMultiplier = 0.5 + (settingVal / 10) * 1.5;
   }
 
@@ -85,6 +108,18 @@ export class InputManager {
 
   public setOnInventoryToggle(cb: () => void): void {
     this.onInventoryToggleCallback = cb;
+  }
+
+  public setOnCraftingToggle(cb: () => void): void {
+    this.onCraftingToggleCallback = cb;
+  }
+
+  public setOnRotatePlacement(cb: () => void): void {
+    this.onRotatePlacementCallback = cb;
+  }
+
+  public setOnPrimaryAction(cb: () => void): void {
+    this.onPrimaryActionCallback = cb;
   }
 
   public isKeyDown(code: string): boolean {
