@@ -412,3 +412,4 @@ export class BuildingManager {
     this.isShelterComplete = false;
   }
 }
+

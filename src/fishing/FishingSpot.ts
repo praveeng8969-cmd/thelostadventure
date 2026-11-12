@@ -74,3 +74,4 @@ export class FishingSpot {
     return { success: true, message: 'Caught Raw Fish (+1)!' };
   }
 }
+

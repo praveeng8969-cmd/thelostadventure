@@ -179,3 +179,4 @@ export class CampfireManager {
     this.campfires = [];
   }
 }
+
