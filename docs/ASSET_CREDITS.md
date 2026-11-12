@@ -16,9 +16,14 @@ The game build downloads a small set of licensed assets into `public/models/` an
 - This is a civilian character. The in-game procedural expedition survivor is a fallback if the GLB fails to load.
 - GLB has been independently checksum-verified during Vercel preview build. Animation clip availability varies with source rig; the game uses procedural bone motion if needed.
 
+## Shipwreck props — Kenney Survival Kit 2.0
+- `props/barrel.glb`, `box.glb`, `chest.glb`, `rock-a.glb`, `tree-log.glb`, `colormap.png`
+- Author: Kenney, CC0. [Official Survival Kit](https://kenney.nl/assets/survival-kit)
+- [Redistribution provenance](https://github.com/euuuuuuan/fatal-funnel-public/blob/main/CREDITS.md)
+- Used as additional beach salvage and the visible emergency chest.
+
 ## Additional candidate packs (not yet installed)
 - [Kenney Animated Characters Survivors](https://kenney.nl/assets/animated-characters-survivors) — CC0, FBX character rig; requires export/retarget to browser-ready GLB.
-- [Kenney Survival Kit](https://kenney.nl/assets/survival-kit) — CC0 survival props, camping and environment.
 - [Quaternius Ultimate Stylized Nature](https://quaternius.com/packs/ultimatestylizednature.html) — CC0 foliage and terrain assets; select and optimize individual glTF models before deployment.
 
 ## Constraints
