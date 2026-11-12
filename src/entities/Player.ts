@@ -39,6 +39,7 @@ export class Player {
       const scale = 2.05 / size.y;
       model.scale.setScalar(scale);
       model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      this.rightHandBone = null;
       model.traverse(obj => {
         if (obj instanceof THREE.Mesh) {
           obj.castShadow = true;
