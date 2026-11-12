@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Lost Adventure - 3D Survival Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- In-Game HUD -->
+    <div id="hud-container" class="hidden">
+      <!-- Top Bar: Game Title & Coordinates -->
+      <div class="hud-top-bar">
+        <div class="hud-title-badge">
+          <span class="hud-game-title">THE LOST ADVENTURE</span>
+          <span class="hud-version-tag">PROTOTYPE v0.1</span>
+        </div>
+        <div class="hud-mission-panel">
+          <div class="hud-mission-label">CURRENT MISSION</div>
+          <div id="hud-mission-text" class="hud-mission-text">Explore the shoreline and locate your shipwreck.</div>
+        </div>
+        <div class="hud-info-badge">
+          <span id="hud-coords">LOC: 0, 0</span>
+          <span id="hud-time">TIME: 12:00</span>
+        </div>
+      </div>
+
+      <!-- Center Interaction Toast -->
+      <div id="hud-interaction" class="hud-interaction hidden">
+        <span class="key-badge">E</span>
+        <span id="interaction-text">Search Wreckage</span>
+      </div>
+
+      <!-- Controls Hint (Bottom Right) -->
+      <div class="hud-controls-helper">
+        <div class="control-row"><span class="key-pill">WASD</span> Move</div>
+        <div class="control-row"><span class="key-pill">SHIFT</span> Sprint</div>
+        <div class="control-row"><span class="key-pill">MOUSE</span> Look</div>
+        <div class="control-row"><span class="key-pill">ESC</span> Pause</div>
+      </div>
+
+      <!-- Survival Status Bars (Bottom Left) -->
+      <div class="hud-status-bars">
+        <div class="status-bar-group">
+          <div class="bar-header">
+            <span class="bar-name">HEALTH</span>
+            <span id="health-value" class="bar-val">100%</span>
+          </div>
+          <div class="bar-track">
+            <div id="health-fill" class="bar-fill health-color" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <div class="status-bar-group">
+          <div class="bar-header">
+            <span class="bar-name">HUNGER</span>
+            <span id="hunger-value" class="bar-val">95%</span>
+          </div>
+          <div class="bar-track">
+            <div id="hunger-fill" class="bar-fill hunger-color" style="width: 95%;"></div>
+          </div>
+        </div>
+
+        <div class="status-bar-group">
+          <div class="bar-header">
+            <span class="bar-name">THIRST</span>
+            <span id="thirst-value" class="bar-val">90%</span>
+          </div>
+          <div class="bar-track">
+            <div id="thirst-fill" class="bar-fill thirst-color" style="width: 90%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Menu Overlay -->
+    <div id="main-menu" class="menu-overlay">
+      <div class="menu-backdrop-glow"></div>
+      <div class="menu-content">
+        <div class="menu-header">
+          <div class="pre-title">SURVIVE &bullet; UNCOVER &bullet; ESCAPE</div>
+          <h1 class="game-logo">THE LOST ADVENTURE</h1>
+          <p class="tagline">Stranded on an uncharted island. Can you survive the secrets lurking beneath?</p>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-start" class="btn btn-primary">
+            <span class="btn-icon">&#9658;</span> START ADVENTURE
+          </button>
+          <button id="btn-continue" class="btn btn-secondary disabled" disabled>
+            <span class="btn-icon">&#8635;</span> CONTINUE JOURNEY
+          </button>
+          <button id="btn-controls" class="btn btn-tertiary">
+            <span class="btn-icon">&#9099;</span> CONTROLS
+          </button>
+          <button id="btn-settings" class="btn btn-tertiary">
+            <span class="btn-icon">&#9881;</span> SETTINGS
+          </button>
+        </div>
+
+        <div class="menu-footer">
+          <span>v0.1 Single-Player Prototype</span> &bull;
+          <span>Built with Three.js & Vite</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Menu Overlay -->
+    <div id="pause-menu" class="menu-overlay hidden">
+      <div class="menu-content modal-card">
+        <h2>GAME PAUSED</h2>
+        <div class="menu-actions">
+          <button id="btn-resume" class="btn btn-primary">RESUME</button>
+          <button id="btn-save-game" class="btn btn-secondary">SAVE GAME</button>
+          <button id="btn-pause-settings" class="btn btn-tertiary">SETTINGS</button>
+          <button id="btn-quit-menu" class="btn btn-danger">RETURN TO MAIN MENU</button>
+        </div>
+        <div id="save-notification" class="save-toast hidden">Game Saved Successfully!</div>
+      </div>
+    </div>
+
+    <!-- Controls Modal -->
+    <div id="modal-controls" class="modal-backdrop hidden">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3>EXPEDITION CONTROLS</h3>
+          <button class="modal-close" id="btn-close-controls">&times;</button>
+        </div>
+        <div class="modal-body">
+          <table class="controls-table">
+            <tr>
+              <td><span class="key-pill">W A S D</span></td>
+              <td>Walk / Directional Movement</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">Left Shift</span></td>
+              <td>Sprint / Run faster</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">Mouse</span></td>
+              <td>Look around (Click screen to lock cursor)</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">E</span></td>
+              <td>Interact with objects & shipwreck salvage</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">ESC</span></td>
+              <td>Pause Menu / Release cursor</td>
+            </tr>
+          </table>
+          <p class="modal-hint">Tip: Keep an eye on your hunger and thirst meters while sprinting across the dunes.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="btn-controls-ok">GOT IT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="modal-settings" class="modal-backdrop hidden">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3>SETTINGS</h3>
+          <button class="modal-close" id="btn-close-settings">&times;</button>
+        </div>
+        <div class="modal-body settings-body">
+          <div class="setting-item">
+            <label for="setting-volume">Master Audio Volume</label>
+            <div class="slider-wrapper">
+              <input type="range" id="setting-volume" min="0" max="100" value="70" />
+              <span id="volume-val" class="slider-indicator">70%</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="setting-sensitivity">Mouse Sensitivity</label>
+            <div class="slider-wrapper">
+              <input type="range" id="setting-sensitivity" min="1" max="10" value="5" />
+              <span id="sensitivity-val" class="slider-indicator">5</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="setting-fov">Field of View (FOV)</label>
+            <div class="slider-wrapper">
+              <input type="range" id="setting-fov" min="50" max="90" value="65" />
+              <span id="fov-val" class="slider-indicator">65°</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="setting-shadows">Shadow Detail</label>
+            <select id="setting-shadows" class="styled-select">
+              <option value="high">High (Soft PCF)</option>
+              <option value="low">Low (Fast)</option>
+              <option value="off">Off (Max Performance)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-reset-settings">RESET DEFAULTS</button>
+          <button class="btn btn-primary" id="btn-save-settings">APPLY & CLOSE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+
