@@ -32,7 +32,7 @@ export class Engine {
     // Camera
     this.camera = new THREE.PerspectiveCamera(
       65,
-      window.innerWidth / window.innerHeight,
+      canvas.clientWidth / Math.max(1, canvas.clientHeight),
       0.1,
       1200
     );
@@ -44,7 +44,7 @@ export class Engine {
       antialias: true,
       powerPreference: 'high-performance'
     });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -52,6 +52,7 @@ export class Engine {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     window.addEventListener('resize', () => this.handleResize());
+    canvas.parentElement?.addEventListener('gameviewportresize', () => this.handleResize());
   }
 
   public setGraphicsPreset(preset: GraphicsPreset): void {
@@ -91,8 +92,8 @@ export class Engine {
   }
 
   private handleResize(): void {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const width = Math.max(1, this.canvas.clientWidth);
+    const height = Math.max(1, this.canvas.clientHeight);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
