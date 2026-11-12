@@ -11,6 +11,7 @@ import { FishingSpot } from './fishing/FishingSpot';
 import { Player } from './entities/Player';
 import { ThirdPersonCamera } from './entities/ThirdPersonCamera';
 import { InputManager } from './core/InputManager';
+import { MobileControls } from './ui/MobileControls';
 import { CharacterController } from './entities/CharacterController';
 import { Inventory } from './inventory/Inventory';
 import { InventoryUI } from './ui/InventoryUI';
@@ -43,6 +44,7 @@ class GameApp {
   private player: Player;
   private thirdPersonCamera: ThirdPersonCamera;
   private input: InputManager;
+  private mobileControls: MobileControls;
   private controller: CharacterController;
 
   private inventory: Inventory;
@@ -81,6 +83,7 @@ class GameApp {
     this.player = new Player(this.engine.scene);
     this.thirdPersonCamera = new ThirdPersonCamera(this.engine.camera, this.island);
     this.input = new InputManager(canvas);
+    this.mobileControls = new MobileControls(this.input);
     this.controller = new CharacterController(
       this.player,
       this.thirdPersonCamera,
@@ -192,6 +195,7 @@ class GameApp {
             this.hud.setPlacementMode(false);
           }
           this.inventoryUI.open();
+          this.mobileControls.setVisible(false);
           this.input.exitPointerLock();
         }
       }
@@ -211,6 +215,7 @@ class GameApp {
             this.hud.setPlacementMode(false);
           }
           this.craftingUI.open();
+          this.mobileControls.setVisible(false);
           this.input.exitPointerLock();
         }
       }
@@ -252,6 +257,7 @@ class GameApp {
     // When inventory closes by UI button
     this.inventoryUI.setOnClose(() => {
       if (this.state === 'PLAYING' && !this.buildingManager.isPlacing()) {
+        this.mobileControls.setVisible(this.input.touchDevice);
         this.input.requestPointerLock();
       }
     });
@@ -259,6 +265,7 @@ class GameApp {
     // When crafting closes by UI button
     this.craftingUI.setOnClose(() => {
       if (this.state === 'PLAYING' && !this.buildingManager.isPlacing()) {
+        this.mobileControls.setVisible(this.input.touchDevice);
         this.input.requestPointerLock();
       }
     });
@@ -382,6 +389,7 @@ class GameApp {
     this.state = 'PLAYING';
     this.hud.show();
     this.input.requestPointerLock();
+    this.mobileControls.setVisible(this.input.touchDevice);
   }
 
   private continueGame(): void {
@@ -413,9 +421,11 @@ class GameApp {
     this.state = 'PLAYING';
     this.hud.show();
     this.input.requestPointerLock();
+    this.mobileControls.setVisible(this.input.touchDevice);
   }
 
   private pauseGame(): void {
+    this.mobileControls.setVisible(false);
     this.state = 'PAUSED';
     this.input.exitPointerLock();
     this.mainMenu.showPauseMenu();
@@ -425,6 +435,7 @@ class GameApp {
     this.state = 'PLAYING';
     this.mainMenu.hidePauseMenu();
     this.input.requestPointerLock();
+    this.mobileControls.setVisible(this.input.touchDevice);
   }
 
   private saveGame(): void {
@@ -452,6 +463,7 @@ class GameApp {
   }
 
   private quitToMainMenu(): void {
+    this.mobileControls.setVisible(false);
     this.state = 'MENU';
     if (this.inventoryUI.isOpen()) this.inventoryUI.close();
     if (this.craftingUI.isOpen()) this.craftingUI.close();
@@ -635,7 +647,7 @@ class GameApp {
 
       if (!isModalOpen) {
         const mouseDeltas = this.input.consumeMouseDeltas();
-        if (this.input.pointerLocked) {
+        if (this.input.pointerLocked || this.input.touchDevice) {
           this.thirdPersonCamera.updateMouseLook(mouseDeltas.x, mouseDeltas.y);
         }
 
