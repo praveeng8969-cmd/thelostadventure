@@ -34,3 +34,23 @@ for (const [name, expectedSha, expectedSize] of assets) {
   console.log('Verified and saved:', name);
 }
 console.log('Quaternius nature assets installed. Run npm run dev.');
+
+/** Civilian survivor, Quaternius Ultimate Modular Men Pack, CC0.
+ * Redistribution provenance: https://github.com/euuuuuuan/fatal-funnel-public/blob/main/CREDITS.md
+ */
+const characterBase = 'https://raw.githubusercontent.com/euuuuuuan/fatal-funnel-public/main/packages/renderer/assets/models/quaternius-men/';
+const characterDir = join(process.cwd(), 'public', 'models', 'characters');
+await mkdir(characterDir, { recursive: true });
+{
+  const name = 'casual-character.glb';
+  const expectedSha = 'f31ba8b389268d4df6005cc62d4d7011de728bce';
+  const expectedSize = 1430660;
+  const response = await fetch(characterBase + name, { signal: AbortSignal.timeout(30000) });
+  if (!response.ok) throw new Error('Character download failed: HTTP ' + response.status);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length !== expectedSize) throw new Error('Character size mismatch');
+  const sha = createHash('sha1').update(Buffer.from('blob ' + bytes.length + '\0')).update(bytes).digest('hex');
+  if (sha !== expectedSha) throw new Error('Character checksum mismatch');
+  await writeFile(join(characterDir, name), bytes);
+  console.log('Verified and saved CC0 civilian survivor:', name);
+}
