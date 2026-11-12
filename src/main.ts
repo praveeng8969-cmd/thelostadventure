@@ -6,6 +6,7 @@ import { Foliage } from './world/Foliage';
 import { Rocks } from './world/Rocks';
 import { WorldDetails } from './world/WorldDetails';
 import { Shipwreck } from './world/Shipwreck';
+import { SignalRelay } from './world/SignalRelay';
 import { CollectiblesManager } from './world/Collectibles';
 import { CampfireManager, CampfireInstance } from './world/Campfire';
 import { FishingSpot } from './fishing/FishingSpot';
@@ -39,6 +40,7 @@ class GameApp {
   private foliage: Foliage;
   private rocks: Rocks;
   private shipwreck: Shipwreck;
+  private signalRelay: SignalRelay;
   private collectiblesManager: CollectiblesManager;
   private campfireManager: CampfireManager;
   private fishingSpot: FishingSpot;
@@ -76,6 +78,7 @@ class GameApp {
     this.rocks = new Rocks(this.engine.scene, this.island);
     new WorldDetails(this.engine.scene, this.island);
     this.shipwreck = new Shipwreck(this.engine.scene, this.island);
+    this.signalRelay = new SignalRelay(this.engine.scene, this.island);
     this.collectiblesManager = new CollectiblesManager(this.engine.scene, this.island);
     this.campfireManager = new CampfireManager(this.engine.scene);
     this.fishingSpot = new FishingSpot(this.engine.scene, this.island);
@@ -557,6 +560,14 @@ class GameApp {
       return;
     }
 
+    // Story landmark: a repeating emergency signal in the inland jungle.
+    if (this.signalRelay.isNear(this.controller.position)) {
+      soundManager.playInteract();
+      this.hud.showToast(this.signalRelay.inspect());
+      this.missionManager.recordRelayInspected();
+      return;
+    }
+
     // 4. Check for Shipwreck interaction
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
@@ -603,6 +614,11 @@ class GameApp {
       return;
     }
 
+    if (this.signalRelay.isNear(this.controller.position)) {
+      this.hud.showInteractionPrompt('Inspect RELAY 04 Emergency Log');
+      return;
+    }
+
     // 4. Shipwreck
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
@@ -627,6 +643,7 @@ class GameApp {
     this.ocean.update(elapsedTime);
     this.atmosphere.update(elapsedTime, this.state === 'PLAYING' ? this.controller.position : undefined);
     this.foliage.update(elapsedTime);
+    this.signalRelay.update(elapsedTime);
     this.fishingSpot.update(elapsedTime);
 
     // Update campfires
