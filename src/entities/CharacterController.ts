@@ -21,6 +21,8 @@ export class CharacterController {
   private walkSpeed: number = 5.2;
   private sprintSpeed: number = 9.4;
   private currentSpeed: number = 0;
+  private readonly maxClimbGrade = 1.15;
+  private readonly slopeProbeDistance = 0.8;
   private targetRotation: number = 0;
   private stepTimer: number = 0;
 
@@ -93,7 +95,10 @@ export class CharacterController {
       speed *= 0.65; // Sluggish movement in deep water
     }
 
-    this.currentSpeed = THREE.MathUtils.lerp(this.currentSpeed, speed, 0.2);
+    // Frame-rate independent acceleration and deceleration, consistent on 30/60/120 FPS.
+    const acceleration = isMoving ? 7.0 : 10.0;
+    const speedBlend = 1 - Math.exp(-acceleration * deltaTime);
+    this.currentSpeed = THREE.MathUtils.lerp(this.currentSpeed, speed, speedBlend);
 
     if (isMoving) {
       // Camera-relative movement
@@ -105,19 +110,48 @@ export class CharacterController {
         .addScaledVector(rightVec, moveInput.strafe)
         .normalize();
 
-      // Position update
-      const moveDelta = this.currentSpeed * deltaTime;
-      const newX = this.player.mesh.position.x + moveDir.x * moveDelta;
-      const newZ = this.player.mesh.position.z + moveDir.z * moveDelta;
+      // Terrain slope physics: climb steep ground slowly, block near-vertical
+      // terrain, and slide movement along the contour where possible.
+      const originX = this.player.mesh.position.x;
+      const originZ = this.player.mesh.position.z;
+      const probe = this.slopeProbeDistance;
+      const groundX = this.island.getHeightAt(originX + probe, originZ) -
+        this.island.getHeightAt(originX - probe, originZ);
+      const groundZ = this.island.getHeightAt(originX, originZ + probe) -
+        this.island.getHeightAt(originX, originZ - probe);
+      const gradient = new THREE.Vector2(groundX / (2 * probe), groundZ / (2 * probe));
+      const uphillGrade = gradient.x * moveDir.x + gradient.y * moveDir.z;
 
-      // Keep within island bounds
-      const distFromCenter = Math.hypot(newX, newZ);
-      if (distFromCenter < 145) {
+      if (uphillGrade > this.maxClimbGrade) {
+        // Remove uphill component without preventing sideways movement.
+        const slopeLengthSq = gradient.lengthSq();
+        if (slopeLengthSq > 0.001) {
+          const gradientDir = gradient.clone().normalize();
+          const projected = moveDir.x * gradientDir.x + moveDir.z * gradientDir.y;
+          moveDir.x -= projected * gradientDir.x;
+          moveDir.z -= projected * gradientDir.y;
+          const remaining = Math.hypot(moveDir.x, moveDir.z);
+          if (remaining > 0.01) moveDir.divideScalar(remaining);
+          else moveDir.set(0, 0, 0);
+        }
+      }
+
+      const climbFactor = uphillGrade > 0 ? Math.max(0.35, 1 - uphillGrade * 0.35) : 1;
+      const moveDelta = this.currentSpeed * climbFactor * deltaTime;
+      const newX = originX + moveDir.x * moveDelta;
+      const newZ = originZ + moveDir.z * moveDelta;
+
+      // Check the destination slope as well to prevent tunneling through
+      // sharp cliff faces at high speed or low frame rates.
+      const currentHeight = this.island.getHeightAt(originX, originZ);
+      const nextHeight = this.island.getHeightAt(newX, newZ);
+      const stepDistance = Math.hypot(newX - originX, newZ - originZ);
+      const stepGrade = stepDistance > 0.001 ? (nextHeight - currentHeight) / stepDistance : 0;
+      const withinBounds = Math.hypot(newX, newZ) < 145;
+      if (withinBounds && stepGrade <= this.maxClimbGrade && stepDistance > 0) {
         this.player.mesh.position.x = newX;
         this.player.mesh.position.z = newZ;
-        if (this.onMoveDistanceCallback) {
-          this.onMoveDistanceCallback(moveDelta);
-        }
+        this.onMoveDistanceCallback?.(stepDistance);
       }
 
       // Smooth rotation toward movement vector
