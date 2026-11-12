@@ -18,6 +18,7 @@ export class Engine {
   public canvas: HTMLCanvasElement;
 
   private currentPreset: GraphicsPreset = 'high';
+  private resizeObserver: ResizeObserver | null = null;
   private frameCount: number = 0;
   private lastFpsTime: number = performance.now();
   private currentFps: number = 60;
@@ -32,7 +33,7 @@ export class Engine {
     // Camera
     this.camera = new THREE.PerspectiveCamera(
       65,
-      canvas.clientWidth / Math.max(1, canvas.clientHeight),
+      Math.max(1, canvas.parentElement?.clientWidth ?? canvas.clientWidth) / Math.max(1, canvas.parentElement?.clientHeight ?? canvas.clientHeight),
       0.1,
       1200
     );
@@ -44,7 +45,8 @@ export class Engine {
       antialias: true,
       powerPreference: 'high-performance'
     });
-    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    // Do not write inline canvas dimensions: they freeze portrait width after rotation.
+    this.renderer.setSize(Math.max(1, canvas.parentElement?.clientWidth ?? canvas.clientWidth), Math.max(1, canvas.parentElement?.clientHeight ?? canvas.clientHeight), false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -53,6 +55,11 @@ export class Engine {
 
     window.addEventListener('resize', () => this.handleResize());
     canvas.parentElement?.addEventListener('gameviewportresize', () => this.handleResize());
+    if (canvas.parentElement && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver.observe(canvas.parentElement);
+    }
+    this.handleResize();
   }
 
   public setGraphicsPreset(preset: GraphicsPreset): void {
@@ -92,11 +99,12 @@ export class Engine {
   }
 
   private handleResize(): void {
-    const width = Math.max(1, this.canvas.clientWidth);
-    const height = Math.max(1, this.canvas.clientHeight);
+    const container = this.canvas.parentElement;
+    const width = Math.max(1, container?.clientWidth ?? window.innerWidth);
+    const height = Math.max(1, container?.clientHeight ?? window.innerHeight);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(width, height, false);
   }
 
   public updatePerformanceStats(): PerformanceStats {
