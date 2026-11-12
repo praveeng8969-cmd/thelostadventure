@@ -4,6 +4,7 @@ import { Island } from './world/Island';
 import { Ocean } from './world/Ocean';
 import { Foliage } from './world/Foliage';
 import { Rocks } from './world/Rocks';
+import { WorldDetails } from './world/WorldDetails';
 import { Shipwreck } from './world/Shipwreck';
 import { CollectiblesManager } from './world/Collectibles';
 import { CampfireManager, CampfireInstance } from './world/Campfire';
@@ -73,6 +74,7 @@ class GameApp {
     this.ocean = new Ocean(this.engine.scene);
     this.foliage = new Foliage(this.engine.scene, this.island);
     this.rocks = new Rocks(this.engine.scene, this.island);
+    new WorldDetails(this.engine.scene, this.island);
     this.shipwreck = new Shipwreck(this.engine.scene, this.island);
     this.collectiblesManager = new CollectiblesManager(this.engine.scene, this.island);
     this.campfireManager = new CampfireManager(this.engine.scene);
