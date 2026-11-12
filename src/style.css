@@ -1093,3 +1093,66 @@ body, html {
   .mobile-controls button { min-width: 56px; min-height: 44px; font-size: 11px; }
   .mobile-top-actions { top: max(62px, env(safe-area-inset-top)); }
 }
+
+
+/* Responsive mobile landscape HUD: keep all gameplay data visible. */
+@media (pointer: coarse) {
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  #game-container { width: 100vw; height: 100dvh; }
+  #hud-container { padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+  .hud-top-bar { align-items: flex-start; display: grid; grid-template-columns: minmax(105px, 1fr) minmax(170px, 1.3fr) minmax(110px, 1fr); gap: 8px; }
+  .hud-title-badge { padding: 5px 9px; min-width: 0; }
+  .hud-game-title { font-size: clamp(10px, 1.7vw, 16px); letter-spacing: .5px; }
+  .hud-version-tag { font-size: 9px; letter-spacing: .5px; }
+  .hud-mission-panel { padding: 4px 10px; min-width: 0; max-width: none; }
+  .hud-mission-label { font-size: 9px; letter-spacing: 1px; }
+  .hud-mission-text { font-size: clamp(11px, 1.5vw, 15px); }
+  .hud-info-badge { padding: 6px 8px; gap: 7px; font-size: 10px; letter-spacing: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .hud-status-bars { position: absolute; left: max(152px, calc(env(safe-area-inset-left) + 142px)); bottom: max(8px, env(safe-area-inset-bottom)); width: clamp(170px, 25vw, 230px); gap: 4px; padding: 7px 9px; }
+  .bar-header { font-size: 10px; }
+  .status-bar-group { gap: 2px; }
+  .bar-track { height: 5px; }
+  .hud-controls-helper { display: none; }
+  body.mobile-help-open .hud-controls-helper { display: flex; position: absolute; right: max(12px, env(safe-area-inset-right)); top: 104px; bottom: auto; z-index: 36; max-height: calc(100% - 120px); overflow: auto; padding: 8px 10px; }
+  .mobile-top-actions { top: max(52px, calc(env(safe-area-inset-top) + 48px)); right: max(10px, env(safe-area-inset-right)); }
+  .mobile-top-actions button { min-height: 36px; min-width: 54px; padding: 0 8px; font-size: 11px; }
+  .mobile-stick { width: clamp(86px, 17vh, 124px); height: clamp(86px, 17vh, 124px); bottom: max(12px, env(safe-area-inset-bottom)); }
+  .mobile-actions { grid-template-columns: repeat(2, 66px); gap: 6px; }
+  .mobile-actions button { min-height: 40px; font-size: 11px; }
+  .mission-banner { top: 70px; padding: 7px 12px; max-width: 38%; }
+  .mission-banner-icon { font-size: 1.3rem; }
+  .mission-banner-title { font-size: 10px; }
+  .mission-banner-desc { font-size: 12px; }
+  .hud-toast { bottom: 105px; padding: 6px 12px; font-size: 12px; max-width: 50%; }
+  .hud-interaction { top: 48%; padding: 6px 12px; font-size: 12px; }
+  .hud-shelter-badge { max-width: 36%; }
+  .menu-content { max-height: 94%; overflow: auto; padding: 12px; }
+  .game-logo { font-size: clamp(22px, 4vw, 38px); }
+  .menu-header { margin-bottom: 12px; }
+  .menu-actions { gap: 6px; }
+  .btn { padding: 7px 12px; font-size: 14px; }
+  .menu-footer { margin-top: 10px; }
+  .modal-panel { max-height: 94%; overflow: auto; padding: 12px; }
+  .modal-header { margin-bottom: 10px; }
+  .modal-header h3 { font-size: 15px; }
+  .inventory-layout { flex-direction: row; gap: 12px; }
+  .inventory-grid { grid-gap: 4px; }
+  .inventory-slot { width: min(10vh, 55px); height: min(10vh, 55px); }
+  .mobile-look { left: 42%; }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  body.mobile-landscape-fallback #game-container {
+    position: fixed; top: 0; left: 0;
+    width: 100dvh; height: 100vw;
+    transform-origin: top left;
+    transform: translateX(100vw) rotate(90deg);
+  }
+  body.mobile-landscape-fallback .mobile-top-actions { top: 52px; }
+}
+@media (pointer: coarse) and (max-height: 380px) {
+  .hud-title-badge { padding: 3px 6px; }
+  .hud-status-bars { width: 170px; }
+  .mobile-stick { width: 82px; height: 82px; }
+  .mobile-actions button { min-height: 34px; }
+  .mobile-top-actions { top: 44px; }
+}
