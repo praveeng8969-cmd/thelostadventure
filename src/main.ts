@@ -12,6 +12,7 @@ import { Player } from './entities/Player';
 import { ThirdPersonCamera } from './entities/ThirdPersonCamera';
 import { InputManager } from './core/InputManager';
 import { MobileControls } from './ui/MobileControls';
+import { MobileLayout } from './ui/MobileLayout';
 import { CharacterController } from './entities/CharacterController';
 import { Inventory } from './inventory/Inventory';
 import { InventoryUI } from './ui/InventoryUI';
@@ -45,6 +46,7 @@ class GameApp {
   private thirdPersonCamera: ThirdPersonCamera;
   private input: InputManager;
   private mobileControls: MobileControls;
+  private mobileLayout: MobileLayout;
   private controller: CharacterController;
 
   private inventory: Inventory;
@@ -84,6 +86,7 @@ class GameApp {
     this.thirdPersonCamera = new ThirdPersonCamera(this.engine.camera, this.island);
     this.input = new InputManager(canvas);
     this.mobileControls = new MobileControls(this.input);
+    this.mobileLayout = new MobileLayout();
     this.controller = new CharacterController(
       this.player,
       this.thirdPersonCamera,
@@ -364,6 +367,7 @@ class GameApp {
   }
 
   private startNewGame(): void {
+    void this.mobileLayout.requestLandscape();
     soundManager.startOceanAmbience();
     this.controller.spawnOnBeach();
     this.controller.stats = {
@@ -393,6 +397,7 @@ class GameApp {
   }
 
   private continueGame(): void {
+    void this.mobileLayout.requestLandscape();
     const data = SaveSystem.loadGame();
     if (!data) {
       this.startNewGame();
@@ -432,6 +437,7 @@ class GameApp {
   }
 
   private resumeGame(): void {
+    void this.mobileLayout.requestLandscape();
     this.state = 'PLAYING';
     this.mainMenu.hidePauseMenu();
     this.input.requestPointerLock();
