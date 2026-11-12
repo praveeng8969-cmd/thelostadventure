@@ -1,11 +1,19 @@
 import * as THREE from 'three';
 import { SurvivorVisual } from './SurvivorVisual';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export type CharacterAnimState = 'IDLE' | 'WALK' | 'RUN' | 'SPRINT';
 
 export class Player {
   public mesh: THREE.Group; // Character root (physics & position)
   private survivor: SurvivorVisual;
+  private importedModel: THREE.Group | null = null;
+  private mixer: THREE.AnimationMixer | null = null;
+  private animations = new Map<string, THREE.AnimationAction>();
+  private activeAnimation: THREE.AnimationAction | null = null;
+  private legBones: THREE.Bone[] = [];
+  private armBones: THREE.Bone[] = [];
+  private elapsed = 0;
   private rightHandBone: THREE.Object3D | null = null;
   private equippedAxeGroup: THREE.Group | null = null;
 
@@ -19,6 +27,57 @@ export class Player {
     this.mesh.add(this.survivor.group);
     this.rightHandBone = this.survivor.rightHand;
     this.isLoaded = true;
+    this.loadExpeditionModel();
+  }
+
+  private loadExpeditionModel(): void {
+    new GLTFLoader().load('/models/characters/casual-character.glb', gltf => {
+      const model = gltf.scene;
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.y < 0.01 || !Number.isFinite(size.y)) return;
+      const center = bounds.getCenter(new THREE.Vector3());
+      const scale = 2.05 / size.y;
+      model.scale.setScalar(scale);
+      model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      this.rightHandBone = null;
+      model.traverse(obj => {
+        if (obj instanceof THREE.Mesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+        }
+        if (obj instanceof THREE.Bone) {
+          const name = obj.name.toLowerCase();
+          if (/right.*hand|hand.*right/.test(name)) this.rightHandBone = obj;
+          if (/thigh|upper.?leg/.test(name)) this.legBones.push(obj);
+          if (/upper.?arm|shoulder/.test(name)) this.armBones.push(obj);
+        }
+      });
+      this.mesh.add(model);
+      this.importedModel = model;
+      this.survivor.group.visible = false;
+      if (gltf.animations.length) {
+        this.mixer = new THREE.AnimationMixer(model);
+        for (const clip of gltf.animations) {
+          this.animations.set(clip.name.toLowerCase(), this.mixer.clipAction(clip));
+        }
+      }
+      if (this.equippedAxeGroup) {
+        const axe = this.equippedAxeGroup;
+        axe.removeFromParent();
+        const importedHand = this.rightHandBone as THREE.Object3D | null;
+        if (importedHand) {
+          axe.position.set(0, 0.02, 0);
+          axe.rotation.set(-Math.PI / 2, 0, Math.PI / 4);
+          axe.scale.setScalar(0.65);
+          importedHand.add(axe);
+        } else {
+          axe.position.set(0.35, 0.8, 0.2);
+          this.mesh.add(axe);
+        }
+      }
+      console.info('[Player] Quaternius civilian explorer GLB loaded.');
+    }, undefined, err => console.warn('[Player] Civilian GLB unavailable; using procedural explorer.', err));
   }
 
   public setEquippedTool(tool: 'stone_axe' | null): void {
@@ -91,6 +150,27 @@ export class Player {
 
   public updateAnimation(deltaTime: number, speed: number, isSprinting: boolean): void {
     this.survivor.update(deltaTime, speed, isSprinting);
+    if (!this.importedModel) return;
+    this.elapsed += deltaTime;
+    this.mixer?.update(deltaTime);
+    const desired = speed > 5 ? 'run' : speed > 0.2 ? 'walk' : 'idle';
+    const clip = [...this.animations.entries()].find(([name]) => name.includes(desired))?.[1];
+    if (clip && clip !== this.activeAnimation) {
+      this.activeAnimation?.fadeOut(0.2);
+      clip.reset().fadeIn(0.2).play();
+      this.activeAnimation = clip;
+    }
+    if (!this.mixer || this.animations.size === 0) {
+      // Lightweight locomotion when the source rig has no animation clips.
+      const amount = Math.min(0.42, speed * 0.08);
+      const step = Math.sin(this.elapsed * (isSprinting ? 12 : 8)) * amount;
+      for (let i = 0; i < this.legBones.length; i++) {
+        this.legBones[i].rotation.x = (i % 2 ? -step : step);
+      }
+      for (let i = 0; i < this.armBones.length; i++) {
+        this.armBones[i].rotation.x = (i % 2 ? step : -step) * 0.65;
+      }
+    }
   }
 
   public get position(): THREE.Vector3 {

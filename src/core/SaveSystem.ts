@@ -101,7 +101,8 @@ export class SaveSystem {
                 campfireLit: false,
                 fishCooked: 0,
                 shelterBuilt: false,
-                shipwreckReturned: false
+                shipwreckReturned: false,
+                relayInspected: false
               },
               completedIds: []
             },
@@ -148,7 +149,8 @@ export class SaveSystem {
                 campfireLit: false,
                 fishCooked: 0,
                 shelterBuilt: false,
-                shipwreckReturned: false
+                shipwreckReturned: false,
+                relayInspected: false
               },
               completedIds: []
             },
@@ -195,7 +197,8 @@ export class SaveSystem {
                 campfireLit: false,
                 fishCooked: 0,
                 shelterBuilt: false,
-                shipwreckReturned: false
+                shipwreckReturned: false,
+                relayInspected: false
               },
               completedIds: []
             },
@@ -222,11 +225,11 @@ export class SaveSystem {
 
   public static loadSettings(): GameSettings {
     const defaults: GameSettings = {
-      preset: 'high',
+      preset: window.matchMedia('(pointer: coarse)').matches ? 'low' : 'high',
       volume: 70,
       sensitivity: 5,
       fov: 65,
-      shadows: 'high'
+      shadows: window.matchMedia('(pointer: coarse)').matches ? 'low' : 'high'
     };
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);

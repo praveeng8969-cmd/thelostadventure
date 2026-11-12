@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run assets:install && tsc && vite build",
     "preview": "vite preview",
     "assets:install": "node scripts/install-nature-assets.mjs"
   },
