@@ -1,4 +1,5 @@
 import { PlayerStats } from '../entities/CharacterController';
+import { PerformanceStats } from '../core/Engine';
 import * as THREE from 'three';
 
 export class HUD {
@@ -20,6 +21,14 @@ export class HUD {
   private missionBannerDesc: HTMLElement;
   private shelterBadgeEl: HTMLElement;
   private placementHelperEl: HTMLElement;
+
+  // Real-time debug performance overlay (F3)
+  private debugOverlayEl: HTMLElement;
+  private debugFpsEl: HTMLElement;
+  private debugDrawCallsEl: HTMLElement;
+  private debugTrianglesEl: HTMLElement;
+  private debugGeometriesEl: HTMLElement;
+  private debugWeatherEl: HTMLElement;
 
   private toastTimeout: number | null = null;
   private bannerTimeout: number | null = null;
@@ -45,6 +54,13 @@ export class HUD {
     this.missionBannerDesc = document.getElementById('mission-complete-desc')!;
     this.shelterBadgeEl = document.getElementById('hud-shelter-badge')!;
     this.placementHelperEl = document.getElementById('hud-placement-helper')!;
+
+    this.debugOverlayEl = document.getElementById('hud-debug-overlay')!;
+    this.debugFpsEl = document.getElementById('debug-fps')!;
+    this.debugDrawCallsEl = document.getElementById('debug-drawcalls')!;
+    this.debugTrianglesEl = document.getElementById('debug-triangles')!;
+    this.debugGeometriesEl = document.getElementById('debug-geometries')!;
+    this.debugWeatherEl = document.getElementById('debug-weather')!;
   }
 
   public show(): void {
@@ -138,5 +154,24 @@ export class HUD {
     this.bannerTimeout = window.setTimeout(() => {
       this.missionBannerEl.classList.add('hidden');
     }, 4500);
+  }
+
+  public toggleDebugOverlay(): boolean {
+    const isHidden = this.debugOverlayEl.classList.toggle('hidden');
+    return !isHidden;
+  }
+
+  public isDebugOverlayVisible(): boolean {
+    return !this.debugOverlayEl.classList.contains('hidden');
+  }
+
+  public updateDebugOverlay(stats: PerformanceStats, weather: string): void {
+    if (this.debugOverlayEl.classList.contains('hidden')) return;
+
+    this.debugFpsEl.innerText = stats.fps.toString();
+    this.debugDrawCallsEl.innerText = stats.drawCalls.toString();
+    this.debugTrianglesEl.innerText = stats.triangles.toLocaleString();
+    this.debugGeometriesEl.innerText = stats.geometries.toString();
+    this.debugWeatherEl.innerText = weather;
   }
 }

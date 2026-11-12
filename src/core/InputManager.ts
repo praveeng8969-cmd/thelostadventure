@@ -12,6 +12,8 @@ export class InputManager {
   private onCraftingToggleCallback: (() => void) | null = null;
   private onRotatePlacementCallback: (() => void) | null = null;
   private onPrimaryActionCallback: (() => void) | null = null;
+  private onDebugToggleCallback: (() => void) | null = null;
+  private onWeatherToggleCallback: (() => void) | null = null;
 
   constructor(targetElement: HTMLElement) {
     this.targetElement = targetElement;
@@ -50,6 +52,20 @@ export class InputManager {
       if (e.code === 'KeyR') {
         if (this.onRotatePlacementCallback) {
           this.onRotatePlacementCallback();
+        }
+      }
+
+      if (e.code === 'F3') {
+        e.preventDefault();
+        if (this.onDebugToggleCallback) {
+          this.onDebugToggleCallback();
+        }
+      }
+
+      if (e.code === 'F4') {
+        e.preventDefault();
+        if (this.onWeatherToggleCallback) {
+          this.onWeatherToggleCallback();
         }
       }
     });
@@ -120,6 +136,14 @@ export class InputManager {
 
   public setOnPrimaryAction(cb: () => void): void {
     this.onPrimaryActionCallback = cb;
+  }
+
+  public setOnDebugToggle(cb: () => void): void {
+    this.onDebugToggleCallback = cb;
+  }
+
+  public setOnWeatherToggle(cb: () => void): void {
+    this.onWeatherToggleCallback = cb;
   }
 
   public isKeyDown(code: string): boolean {

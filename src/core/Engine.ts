@@ -1,11 +1,26 @@
 import * as THREE from 'three';
 
+export type GraphicsPreset = 'low' | 'medium' | 'high';
+
+export interface PerformanceStats {
+  fps: number;
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+}
+
 export class Engine {
   public renderer: THREE.WebGLRenderer;
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public clock: THREE.Clock;
   public canvas: HTMLCanvasElement;
+
+  private currentPreset: GraphicsPreset = 'high';
+  private frameCount: number = 0;
+  private lastFpsTime: number = performance.now();
+  private currentFps: number = 60;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -23,20 +38,41 @@ export class Engine {
     );
     this.camera.position.set(0, 10, 25);
 
-    // Renderer
+    // Modern Renderer
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
       powerPreference: 'high-performance'
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.08;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     window.addEventListener('resize', () => this.handleResize());
+  }
+
+  public setGraphicsPreset(preset: GraphicsPreset): void {
+    this.currentPreset = preset;
+
+    if (preset === 'low') {
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.BasicShadowMap;
+    } else if (preset === 'medium') {
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    } else {
+      // High
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
+    this.handleResize();
   }
 
   public setShadowQuality(quality: 'high' | 'low' | 'off'): void {
@@ -47,18 +83,6 @@ export class Engine {
       this.renderer.shadowMap.type =
         quality === 'high' ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
     }
-    this.scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        if (mesh.material) {
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((m) => (m.needsUpdate = true));
-          } else {
-            mesh.material.needsUpdate = true;
-          }
-        }
-      }
-    });
   }
 
   public setFOV(fov: number): void {
@@ -72,11 +96,29 @@ export class Engine {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  }
+
+  public updatePerformanceStats(): PerformanceStats {
+    this.frameCount++;
+    const now = performance.now();
+    const elapsed = now - this.lastFpsTime;
+
+    if (elapsed >= 500) {
+      this.currentFps = Math.round((this.frameCount * 1000) / elapsed);
+      this.frameCount = 0;
+      this.lastFpsTime = now;
+    }
+
+    return {
+      fps: this.currentFps,
+      drawCalls: this.renderer.info.render.calls,
+      triangles: this.renderer.info.render.triangles,
+      geometries: this.renderer.info.memory.geometries,
+      textures: this.renderer.info.memory.textures
+    };
   }
 
   public render(): void {
     this.renderer.render(this.scene, this.camera);
   }
 }
-

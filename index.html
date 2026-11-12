@@ -19,7 +19,7 @@
       <div class="hud-top-bar">
         <div class="hud-title-badge">
           <span class="hud-game-title">THE LOST ADVENTURE</span>
-          <span class="hud-version-tag">VERSION 0.1C</span>
+          <span class="hud-version-tag">STYLIZED REALISM</span>
         </div>
         <div class="hud-mission-panel">
           <div class="hud-mission-label">CURRENT OBJECTIVE</div>
@@ -34,6 +34,16 @@
       <!-- Shelter Status Badge -->
       <div id="hud-shelter-badge" class="hud-shelter-badge hidden">
         🛡️ SHELTERED: WEATHER PROTECTED
+      </div>
+
+      <!-- Real-time Engine Performance Stats (F3) -->
+      <div id="hud-debug-overlay" class="hud-debug-overlay hidden">
+        <div class="debug-title">ENGINE STATS (F3)</div>
+        <div class="debug-row">FPS: <span id="debug-fps">60</span></div>
+        <div class="debug-row">Draw Calls: <span id="debug-drawcalls">0</span></div>
+        <div class="debug-row">Triangles: <span id="debug-triangles">0</span></div>
+        <div class="debug-row">Geometries: <span id="debug-geometries">0</span></div>
+        <div class="debug-row">Weather: <span id="debug-weather">CLEAR</span> <span class="debug-key">(F4)</span></div>
       </div>
 
       <!-- Placement Mode HUD Helper -->
@@ -69,6 +79,8 @@
         <div class="control-row"><span class="key-pill">TAB</span> Inventory (16 Slots)</div>
         <div class="control-row"><span class="key-pill">C</span> Crafting Menu</div>
         <div class="control-row"><span class="key-pill">E</span> Interact / Collect / Cook</div>
+        <div class="control-row"><span class="key-pill">F3</span> Performance Stats</div>
+        <div class="control-row"><span class="key-pill">F4</span> Weather Cycle</div>
         <div class="control-row"><span class="key-pill">ESC</span> Pause</div>
       </div>
 
@@ -173,7 +185,7 @@
         </div>
 
         <div class="menu-footer">
-          <span>v0.1C Crafting, Cooking & Shelter Prototype</span> &bull;
+          <span>Stylized-Realistic Tropical Survival Engine</span> &bull;
           <span>Built with Three.js & Vite</span>
         </div>
       </div>
@@ -216,7 +228,7 @@
             </tr>
             <tr>
               <td><span class="key-pill">E</span></td>
-              <td>Collect resources, catch fish, light campfire & cook</td>
+              <td>Collect resources, catch fish, light/extinguish campfire & cook</td>
             </tr>
             <tr>
               <td><span class="key-pill">TAB</span></td>
@@ -229,6 +241,14 @@
             <tr>
               <td><span class="key-pill">R</span></td>
               <td>Rotate building structure preview (90°)</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">F3</span></td>
+              <td>Toggle Performance FPS & Draw Calls Debug Overlay</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">F4</span></td>
+              <td>Cycle Dynamic Weather (Clear, Sunset, Rain, Storm)</td>
             </tr>
             <tr>
               <td><span class="key-pill">ESC</span></td>
@@ -251,6 +271,14 @@
           <button class="modal-close" id="btn-close-settings">&times;</button>
         </div>
         <div class="modal-body settings-body">
+          <div class="setting-item">
+            <label for="setting-preset">Graphics Quality Preset</label>
+            <select id="setting-preset" class="styled-select">
+              <option value="high">High (Maximum Fidelity & PCF Soft Shadows)</option>
+              <option value="medium">Medium (Balanced Fidelity & Shadows)</option>
+              <option value="low">Low (Maximum Performance / 60 FPS)</option>
+            </select>
+          </div>
           <div class="setting-item">
             <label for="setting-volume">Master Audio Volume</label>
             <div class="slider-wrapper">

@@ -223,6 +223,25 @@ class GameApp {
       }
     });
 
+    // F3 Performance Stats Overlay Toggle
+    this.input.setOnDebugToggle(() => {
+      const active = this.hud.toggleDebugOverlay();
+      if (active) {
+        const stats = this.engine.updatePerformanceStats();
+        this.hud.updateDebugOverlay(stats, this.atmosphere.currentWeather);
+      }
+    });
+
+    // F4 Weather Cycle Toggle
+    this.input.setOnWeatherToggle(() => {
+      this.atmosphere.cycleWeather();
+      this.hud.showToast(`Weather shifted to ${this.atmosphere.currentWeather}`);
+      if (this.hud.isDebugOverlayVisible()) {
+        const stats = this.engine.updatePerformanceStats();
+        this.hud.updateDebugOverlay(stats, this.atmosphere.currentWeather);
+      }
+    });
+
     // Left Mouse Click Primary Action (Placement)
     this.input.setOnPrimaryAction(() => {
       if (this.state === 'PLAYING' && this.buildingManager.isPlacing()) {
@@ -328,6 +347,9 @@ class GameApp {
   }
 
   private applySettings(settings: GameSettings): void {
+    if (settings.preset) {
+      this.engine.setGraphicsPreset(settings.preset);
+    }
     this.engine.setFOV(settings.fov);
     this.engine.setShadowQuality(settings.shadows);
     this.input.setSensitivity(settings.sensitivity);
@@ -583,7 +605,8 @@ class GameApp {
 
     // Update global environmental elements
     this.ocean.update(elapsedTime);
-    this.atmosphere.update(elapsedTime);
+    this.atmosphere.update(elapsedTime, this.state === 'PLAYING' ? this.controller.position : undefined);
+    this.foliage.update(elapsedTime);
     this.fishingSpot.update(elapsedTime);
 
     // Update campfires
@@ -642,6 +665,12 @@ class GameApp {
     }
 
     this.engine.render();
+
+    // Performance debug overlay telemetry (F3)
+    if (this.hud.isDebugOverlayVisible()) {
+      const stats = this.engine.updatePerformanceStats();
+      this.hud.updateDebugOverlay(stats, this.atmosphere.currentWeather);
+    }
   }
 }
 

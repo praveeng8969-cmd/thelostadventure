@@ -26,6 +26,7 @@ export class MainMenu {
   private inputFov: HTMLInputElement;
   private fovVal: HTMLElement;
   private selectShadows: HTMLSelectElement;
+  private selectPreset: HTMLSelectElement;
   private btnSaveSettings: HTMLButtonElement;
   private btnResetSettings: HTMLButtonElement;
 
@@ -61,6 +62,7 @@ export class MainMenu {
     this.inputFov = document.getElementById('setting-fov') as HTMLInputElement;
     this.fovVal = document.getElementById('fov-val')!;
     this.selectShadows = document.getElementById('setting-shadows') as HTMLSelectElement;
+    this.selectPreset = document.getElementById('setting-preset') as HTMLSelectElement;
     this.btnSaveSettings = document.getElementById('btn-save-settings') as HTMLButtonElement;
     this.btnResetSettings = document.getElementById('btn-reset-settings') as HTMLButtonElement;
 
@@ -180,6 +182,9 @@ export class MainMenu {
 
   private loadInitialSettings(): void {
     const settings = SaveSystem.loadSettings();
+    if (this.selectPreset && settings.preset) {
+      this.selectPreset.value = settings.preset;
+    }
     this.inputVolume.value = settings.volume.toString();
     this.volumeVal.innerText = `${settings.volume}%`;
     soundManager.setVolume(settings.volume / 100);
@@ -195,6 +200,7 @@ export class MainMenu {
 
   private saveCurrentSettings(): void {
     const settings: GameSettings = {
+      preset: (this.selectPreset ? this.selectPreset.value : 'high') as 'low' | 'medium' | 'high',
       volume: Number(this.inputVolume.value),
       sensitivity: Number(this.inputSensitivity.value),
       fov: Number(this.inputFov.value),
@@ -207,6 +213,9 @@ export class MainMenu {
   }
 
   private resetSettingsToDefaults(): void {
+    if (this.selectPreset) {
+      this.selectPreset.value = 'high';
+    }
     this.inputVolume.value = '70';
     this.volumeVal.innerText = '70%';
     this.inputSensitivity.value = '5';

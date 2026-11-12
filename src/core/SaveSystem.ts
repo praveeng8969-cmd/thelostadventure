@@ -26,6 +26,7 @@ export interface SaveDataV3 {
 }
 
 export interface GameSettings {
+  preset: 'low' | 'medium' | 'high';
   volume: number;
   sensitivity: number;
   fov: number;
@@ -221,6 +222,7 @@ export class SaveSystem {
 
   public static loadSettings(): GameSettings {
     const defaults: GameSettings = {
+      preset: 'high',
       volume: 70,
       sensitivity: 5,
       fov: 65,
