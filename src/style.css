@@ -1140,19 +1140,32 @@ body, html {
   .inventory-slot { width: min(10vh, 55px); height: min(10vh, 55px); }
   .mobile-look { left: 42%; }
 }
-@media (pointer: coarse) and (orientation: portrait) {
-  body.mobile-landscape-fallback #game-container {
-    position: fixed; top: 0; left: 0;
-    width: 100dvh; height: 100vw;
-    transform-origin: top left;
-    transform: translateX(100vw) rotate(90deg);
-  }
-  body.mobile-landscape-fallback .mobile-top-actions { top: 52px; }
-}
 @media (pointer: coarse) and (max-height: 380px) {
   .hud-title-badge { padding: 3px 6px; }
   .hud-status-bars { width: 170px; }
   .mobile-stick { width: 82px; height: 82px; }
   .mobile-actions button { min-height: 34px; }
   .mobile-top-actions { top: 44px; }
+}
+
+/* Orientation correction: never rotate the whole game DOM. */
+.mobile-rotate-notice[hidden] { display: none !important; }
+.mobile-rotate-notice { display: none; }
+@media (pointer: coarse) {
+  .mobile-rotate-notice:not([hidden]) {
+    display: grid; place-items: center; position: fixed; inset: 0; z-index: 9999;
+    padding: 24px; box-sizing: border-box;
+    background: rgba(5, 18, 25, .97); color: #f5f7f7;
+    text-align: center; overflow: auto;
+  }
+  .mobile-rotate-card { max-width: 350px; display: grid; justify-items: center; gap: 14px; font: 15px/1.5 system-ui, sans-serif; }
+  .mobile-rotate-icon { font-size: 70px; line-height: 1; color: #39d9cc; }
+  .mobile-rotate-card h2 { margin: 0; font: 700 26px system-ui, sans-serif; }
+  .mobile-rotate-card p { margin: 0; }
+  .mobile-rotate-fullscreen { min-height: 48px; border-radius: 12px; border: 1px solid #4ee3c7; background: #103b3d; color: white; font: 700 14px system-ui, sans-serif; padding: 10px 18px; }
+  .mobile-rotate-hint { font-size: 12px; opacity: .7; }
+  /* Keep every HUD element in its own landscape zone, including safe areas. */
+  .hud-top-bar { padding-right: max(0px, env(safe-area-inset-right)); }
+  .mobile-top-actions { z-index: 40; }
+  .hud-controls-helper { pointer-events: auto; }
 }
