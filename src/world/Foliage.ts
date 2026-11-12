@@ -1,15 +1,18 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Island } from './Island';
 
 export class Foliage {
   public group: THREE.Group;
   private palmTrees: THREE.Group[] = [];
   private ferns: THREE.Group[] = [];
+  private jungleTrees: THREE.Group[] = [];
 
   constructor(scene: THREE.Scene, island: Island) {
     this.group = new THREE.Group();
     this.populateFoliage(island);
     scene.add(this.group);
+    void this.loadNatureAssets();
   }
 
   private populateFoliage(island: Island): void {
@@ -54,6 +57,7 @@ export class Foliage {
           const s = 0.9 + Math.random() * 0.5;
           tree.scale.set(s, s * (0.9 + Math.random() * 0.25), s);
           this.group.add(tree);
+          this.jungleTrees.push(tree);
         }
         if (Math.random() < 0.72) {
           const fern = fernTemplate.clone();
@@ -218,6 +222,53 @@ export class Foliage {
     }
 
     return fern;
+  }
+
+
+  /**
+   * Replace visible procedural foliage with actual downloaded GLB meshes.
+   * Missing assets retain the existing fallback so the game still loads.
+   * Install them using: npm run assets:install
+   */
+  private async loadNatureAssets(): Promise<void> {
+    const loader = new GLTFLoader();
+    const load = (name: string): Promise<THREE.Group> => new Promise((resolve, reject) => {
+      loader.load('/models/nature/' + name, gltf => resolve(gltf.scene), undefined, reject);
+    });
+    try {
+      const [tree1, tree2, tree3, bush] = await Promise.all([
+        load('tree1.glb'), load('tree2.glb'), load('tree3.glb'), load('bush.glb')
+      ]);
+      const trees = [tree1, tree2, tree3];
+      this.jungleTrees.forEach((old, i) => this.swapVisual(old, trees[i % trees.length], 7));
+      this.ferns.forEach((old) => this.swapVisual(old, bush, 1.6));
+      // Palms remain procedural until a verified palm-specific model is available.
+      console.info('[Foliage] Installed Quaternius trees and shrubs are active.');
+    } catch (error) {
+      console.warn('[Foliage] Nature models not installed; using procedural fallback. Run npm run assets:install.', error);
+    }
+  }
+
+  private swapVisual(old: THREE.Group, source: THREE.Group, targetHeight: number): void {
+    const bounds = new THREE.Box3().setFromObject(source);
+    const size = bounds.getSize(new THREE.Vector3());
+    if (!Number.isFinite(size.y) || size.y <= 0.001) return;
+
+    const visual = source.clone(true);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const scale = targetHeight / size.y;
+    visual.scale.setScalar(scale);
+    visual.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+    visual.traverse(object => {
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = false; // keep GPU cost low on integrated graphics
+        object.receiveShadow = true;
+      }
+    });
+    // Keep original transform/placement and use its group as the new parent.
+    // Clear original procedural meshes, then insert the model.
+    for (const child of [...old.children]) old.remove(child);
+    old.add(visual);
   }
 
   /**
