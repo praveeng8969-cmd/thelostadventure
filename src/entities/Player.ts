@@ -65,11 +65,12 @@ export class Player {
       if (this.equippedAxeGroup) {
         const axe = this.equippedAxeGroup;
         axe.removeFromParent();
-        if (this.rightHandBone) {
+        const importedHand = this.rightHandBone as THREE.Object3D | null;
+        if (importedHand) {
           axe.position.set(0, 0.02, 0);
           axe.rotation.set(-Math.PI / 2, 0, Math.PI / 4);
           axe.scale.setScalar(0.65);
-          this.rightHandBone.add(axe);
+          importedHand.add(axe);
         } else {
           axe.position.set(0.35, 0.8, 0.2);
           this.mesh.add(axe);
