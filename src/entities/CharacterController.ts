@@ -74,13 +74,14 @@ export class CharacterController {
 
   public update(deltaTime: number): void {
     const moveInput = this.input.getMoveVector();
-    const isMoving = moveInput.forward !== 0 || moveInput.strafe !== 0;
+    const moveStrength = Math.min(1, Math.hypot(moveInput.forward, moveInput.strafe));
+    const isMoving = moveStrength > 0.05;
     const isSprinting = isMoving && this.input.isSprinting() && this.stats.thirst > 5;
 
     // Determine target speed
     let speed = 0;
     if (isMoving) {
-      speed = isSprinting ? this.sprintSpeed : this.walkSpeed;
+      speed = (isSprinting ? this.sprintSpeed : this.walkSpeed) * moveStrength;
     }
 
     // Water resistance if wading in shallows

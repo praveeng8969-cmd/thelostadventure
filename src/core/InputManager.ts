@@ -1,5 +1,9 @@
 export class InputManager {
   private keys: Map<string, boolean> = new Map();
+  private touchForward = 0;
+  private touchStrafe = 0;
+  private touchSprint = false;
+  public readonly touchDevice = window.matchMedia('(pointer: coarse)').matches;
   private mouseDeltaX: number = 0;
   private mouseDeltaY: number = 0;
   private isPointerLocked: boolean = false;
@@ -95,6 +99,7 @@ export class InputManager {
   }
 
   public requestPointerLock(): void {
+    if (this.touchDevice) return;
     if (!this.isPointerLocked) {
       try {
         this.targetElement.requestPointerLock();
@@ -159,11 +164,38 @@ export class InputManager {
     if (this.isKeyDown('KeyD') || this.isKeyDown('ArrowRight')) strafe += 1;
     if (this.isKeyDown('KeyA') || this.isKeyDown('ArrowLeft')) strafe -= 1;
 
+    if (Math.abs(this.touchForward) > 0.05 || Math.abs(this.touchStrafe) > 0.05) {
+      return { forward: this.touchForward, strafe: this.touchStrafe };
+    }
     return { forward, strafe };
   }
 
   public isSprinting(): boolean {
-    return this.isKeyDown('ShiftLeft') || this.isKeyDown('ShiftRight');
+    return this.touchSprint || this.isKeyDown('ShiftLeft') || this.isKeyDown('ShiftRight');
+  }
+
+  public setTouchMove(forward: number, strafe: number): void {
+    this.touchForward = Math.max(-1, Math.min(1, forward));
+    this.touchStrafe = Math.max(-1, Math.min(1, strafe));
+  }
+
+  public setTouchSprint(value: boolean): void { this.touchSprint = value; }
+
+  public addLookDelta(x: number, y: number): void {
+    this.mouseDeltaX += x * this.sensitivityMultiplier;
+    this.mouseDeltaY += y * this.sensitivityMultiplier;
+  }
+
+  public triggerAction(action: string): void {
+    const callbacks: Record<string, (() => void) | null> = {
+      interact: this.onInteractCallback,
+      pause: this.onPauseToggleCallback,
+      inventory: this.onInventoryToggleCallback,
+      craft: this.onCraftingToggleCallback,
+      place: this.onPrimaryActionCallback,
+      rotate: this.onRotatePlacementCallback
+    };
+    callbacks[action]?.();
   }
 
   public consumeMouseDeltas(): { x: number; y: number } {

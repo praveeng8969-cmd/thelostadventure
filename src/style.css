@@ -1068,3 +1068,28 @@ body, html {
   color: #94a3b8 !important;
   font-size: 0.7rem;
 }
+
+
+/* Mobile gameplay touch controls */
+.mobile-controls { position: fixed; inset: 0; z-index: 35; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.mobile-controls.hidden { display: none !important; }
+.mobile-look { position: absolute; inset: 0 0 0 40%; touch-action: none; pointer-events: auto; }
+.mobile-stick { position: absolute; bottom: max(24px, env(safe-area-inset-bottom)); left: max(20px, env(safe-area-inset-left)); width: 126px; height: 126px; border-radius: 50%; border: 2px solid rgba(255,255,255,.45); background: rgba(10,24,26,.38); backdrop-filter: blur(5px); touch-action: none; pointer-events: auto; display: grid; place-items: center; }
+.mobile-stick-nub { width: 54px; height: 54px; border-radius: 50%; background: rgba(235,244,230,.64); border: 2px solid rgba(255,255,255,.65); pointer-events: none; }
+.mobile-actions { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(2, minmax(62px, 74px)); gap: 10px; pointer-events: none; }
+.mobile-top-actions { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); display: flex; gap: 8px; pointer-events: none; }
+.mobile-controls button { pointer-events: auto; touch-action: none; min-width: 60px; min-height: 48px; border: 1px solid rgba(255,255,255,.48); border-radius: 15px; background: rgba(13,30,34,.72); color: white; font: 700 13px system-ui,sans-serif; letter-spacing: .03em; -webkit-tap-highlight-color: transparent; }
+.mobile-controls button:active { background: rgba(78,143,111,.85); transform: scale(.96); }
+@media (pointer: fine) { .mobile-controls { display: none !important; } }
+@media (pointer: coarse) {
+  html, body, #game-container, #webgl-canvas { overscroll-behavior: none; }
+  #webgl-canvas { touch-action: none; }
+  .mobile-top-actions { top: max(8px, env(safe-area-inset-top)); }
+  .mobile-actions { bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  .mobile-stick { width: 104px; height: 104px; }
+  .mobile-actions { grid-template-columns: repeat(2, 60px); gap: 6px; }
+  .mobile-controls button { min-width: 56px; min-height: 44px; font-size: 11px; }
+  .mobile-top-actions { top: max(62px, env(safe-area-inset-top)); }
+}
