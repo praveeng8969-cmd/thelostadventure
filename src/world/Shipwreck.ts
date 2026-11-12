@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Island } from './Island';
 import { TextureGenerator } from './TextureGenerator';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export class Shipwreck {
   public group: THREE.Group;
@@ -39,6 +40,65 @@ export class Shipwreck {
 
     this.interactionPosition = this.salvageChest.position.clone();
     scene.add(this.group);
+    void this.loadSurvivalProps(scene, island, shipX, shipZ);
+  }
+
+  private async loadSurvivalProps(scene: THREE.Scene, island: Island, shipX: number, shipZ: number): Promise<void> {
+    const loader = new GLTFLoader();
+    const load = (name: string): Promise<THREE.Group> => new Promise((resolve, reject) => {
+      loader.load('/models/props/' + name + '.glb', gltf => resolve(gltf.scene), undefined, reject);
+    });
+    try {
+      const [crate, barrel, chest, log, rock] = await Promise.all([
+        load('box'), load('barrel'), load('chest'), load('tree-log'), load('rock-a')
+      ]);
+      const spawn = (source: THREE.Group, x: number, z: number, targetHeight: number, angle: number) => {
+        const visual = source.clone(true);
+        const bounds = new THREE.Box3().setFromObject(visual);
+        const size = bounds.getSize(new THREE.Vector3());
+        if (size.y < 0.001) return;
+        const scale = targetHeight / size.y;
+        visual.scale.setScalar(scale);
+        const center = bounds.getCenter(new THREE.Vector3());
+        const base = new THREE.Group();
+        visual.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+        base.add(visual);
+        base.position.set(x, island.getHeightAt(x,z), z);
+        base.rotation.y = angle;
+        visual.traverse(obj => {
+          if (obj instanceof THREE.Mesh) {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+          }
+        });
+        scene.add(base);
+      };
+      // Additional diegetic supplies around the grounded expedition ship.
+      spawn(crate, shipX - 6, shipZ - 6, 1.1, 0.3);
+      spawn(crate, shipX + 8, shipZ + 4, 0.85, 1.3);
+      spawn(barrel, shipX - 7, shipZ + 3, 1.25, 0.5);
+      spawn(barrel, shipX + 7, shipZ - 5, 1.25, 2.1);
+      spawn(log, shipX - 10, shipZ - 3, 0.55, 0.9);
+      spawn(rock, shipX + 11, shipZ + 5, 1.2, 0.2);
+      const visualChest = chest.clone(true);
+      const bounds = new THREE.Box3().setFromObject(visualChest);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.y > 0.001) {
+        const scale = 0.85 / size.y;
+        const center = bounds.getCenter(new THREE.Vector3());
+        visualChest.scale.setScalar(scale);
+        visualChest.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+        const anchor = new THREE.Group();
+        anchor.position.copy(this.salvageChest.position);
+        anchor.position.y -= 0.4;
+        anchor.add(visualChest);
+        scene.add(anchor);
+        this.salvageChest.visible = false; // Preserve interaction position and save logic.
+      }
+      console.info('[Shipwreck] Kenney CC0 survival props loaded.');
+    } catch (error) {
+      console.warn('[Shipwreck] Imported survival props unavailable, keeping procedural assets.', error);
+    }
   }
 
   private buildDetailedShipwreck(): void {
