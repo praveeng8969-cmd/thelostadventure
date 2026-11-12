@@ -149,7 +149,8 @@ export class SaveSystem {
                 campfireLit: false,
                 fishCooked: 0,
                 shelterBuilt: false,
-                shipwreckReturned: false
+                shipwreckReturned: false,
+                relayInspected: false
               },
               completedIds: []
             },
@@ -196,7 +197,8 @@ export class SaveSystem {
                 campfireLit: false,
                 fishCooked: 0,
                 shelterBuilt: false,
-                shipwreckReturned: false
+                shipwreckReturned: false,
+                relayInspected: false
               },
               completedIds: []
             },
