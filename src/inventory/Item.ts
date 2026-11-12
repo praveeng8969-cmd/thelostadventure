@@ -59,3 +59,4 @@ export interface InventorySlot {
   itemType: ResourceType;
   quantity: number;
 }
+
