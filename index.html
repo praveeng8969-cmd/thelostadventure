@@ -15,15 +15,15 @@
 
     <!-- In-Game HUD -->
     <div id="hud-container" class="hidden">
-      <!-- Top Bar: Game Title & Coordinates -->
+      <!-- Top Bar: Game Title, Mission & Coordinates -->
       <div class="hud-top-bar">
         <div class="hud-title-badge">
           <span class="hud-game-title">THE LOST ADVENTURE</span>
-          <span class="hud-version-tag">PROTOTYPE v0.1</span>
+          <span class="hud-version-tag">VERSION 0.1B</span>
         </div>
         <div class="hud-mission-panel">
-          <div class="hud-mission-label">CURRENT MISSION</div>
-          <div id="hud-mission-text" class="hud-mission-text">Explore the shoreline and locate your shipwreck.</div>
+          <div class="hud-mission-label">CURRENT OBJECTIVE</div>
+          <div id="hud-mission-text" class="hud-mission-text">Explore the beach.</div>
         </div>
         <div class="hud-info-badge">
           <span id="hud-coords">LOC: 0, 0</span>
@@ -31,17 +31,30 @@
         </div>
       </div>
 
-      <!-- Center Interaction Toast -->
+      <!-- Mission Complete Banner (Top Center) -->
+      <div id="mission-complete-banner" class="mission-banner hidden">
+        <div class="mission-banner-icon">🏆</div>
+        <div class="mission-banner-content">
+          <div class="mission-banner-title">MISSION COMPLETE</div>
+          <div id="mission-complete-desc" class="mission-banner-desc">Explore the beach</div>
+        </div>
+      </div>
+
+      <!-- Action Toast (Screen Feedback) -->
+      <div id="hud-toast" class="hud-toast hidden">Notification</div>
+
+      <!-- Center Interaction Prompt -->
       <div id="hud-interaction" class="hud-interaction hidden">
         <span class="key-badge">E</span>
-        <span id="interaction-text">Search Wreckage</span>
+        <span id="interaction-text">Collect Wood</span>
       </div>
 
       <!-- Controls Hint (Bottom Right) -->
       <div class="hud-controls-helper">
         <div class="control-row"><span class="key-pill">WASD</span> Move</div>
         <div class="control-row"><span class="key-pill">SHIFT</span> Sprint</div>
-        <div class="control-row"><span class="key-pill">MOUSE</span> Look</div>
+        <div class="control-row"><span class="key-pill">TAB</span> Inventory (16 Slots)</div>
+        <div class="control-row"><span class="key-pill">E</span> Interact / Collect</div>
         <div class="control-row"><span class="key-pill">ESC</span> Pause</div>
       </div>
 
@@ -59,22 +72,46 @@
 
         <div class="status-bar-group">
           <div class="bar-header">
-            <span class="bar-name">HUNGER</span>
-            <span id="hunger-value" class="bar-val">95%</span>
+            <span class="bar-name">HUNGER (-1 / 60s)</span>
+            <span id="hunger-value" class="bar-val">100%</span>
           </div>
           <div class="bar-track">
-            <div id="hunger-fill" class="bar-fill hunger-color" style="width: 95%;"></div>
+            <div id="hunger-fill" class="bar-fill hunger-color" style="width: 100%;"></div>
           </div>
         </div>
 
         <div class="status-bar-group">
           <div class="bar-header">
-            <span class="bar-name">THIRST</span>
-            <span id="thirst-value" class="bar-val">90%</span>
+            <span class="bar-name">THIRST (-1 / 40s)</span>
+            <span id="thirst-value" class="bar-val">100%</span>
           </div>
           <div class="bar-track">
-            <div id="thirst-fill" class="bar-fill thirst-color" style="width: 90%;"></div>
+            <div id="thirst-fill" class="bar-fill thirst-color" style="width: 100%;"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Modal (Tab) -->
+    <div id="modal-inventory" class="modal-backdrop hidden">
+      <div class="modal-panel inventory-panel">
+        <div class="modal-header">
+          <h3>SURVIVOR INVENTORY (16 SLOTS)</h3>
+          <button class="modal-close" id="btn-close-inventory">&times;</button>
+        </div>
+        <div class="inventory-layout">
+          <!-- 16 Slots Grid (4x4) -->
+          <div id="inventory-grid" class="inventory-grid">
+            <!-- Dynamically generated -->
+          </div>
+          <!-- Item Details / Actions -->
+          <div id="inventory-details" class="inventory-details">
+            <div class="empty-details">Select an item in your bag to inspect it.</div>
+          </div>
+        </div>
+        <div class="modal-footer inventory-footer">
+          <span class="inventory-hint"><span class="key-pill">TAB</span> or <span class="key-pill">ESC</span> to close</span>
+          <button class="btn btn-secondary" id="btn-inventory-close">CLOSE</button>
         </div>
       </div>
     </div>
@@ -105,7 +142,7 @@
         </div>
 
         <div class="menu-footer">
-          <span>v0.1 Single-Player Prototype</span> &bull;
+          <span>v0.1B Survival & Missions Prototype</span> &bull;
           <span>Built with Three.js & Vite</span>
         </div>
       </div>
@@ -148,14 +185,18 @@
             </tr>
             <tr>
               <td><span class="key-pill">E</span></td>
-              <td>Interact with objects & shipwreck salvage</td>
+              <td>Collect resources (Wood, Stone, Coconut, Water) & inspect objects</td>
+            </tr>
+            <tr>
+              <td><span class="key-pill">TAB</span></td>
+              <td>Open / Close 16-slot Survivor Inventory</td>
             </tr>
             <tr>
               <td><span class="key-pill">ESC</span></td>
               <td>Pause Menu / Release cursor</td>
             </tr>
           </table>
-          <p class="modal-hint">Tip: Keep an eye on your hunger and thirst meters while sprinting across the dunes.</p>
+          <p class="modal-hint">Tip: Collect coconuts to replenish hunger (+20) and clean spring water to replenish thirst (+30) from your inventory.</p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-primary" id="btn-controls-ok">GOT IT</button>
@@ -212,4 +253,3 @@
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
-

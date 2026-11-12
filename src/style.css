@@ -568,3 +568,244 @@ body, html {
   display: none !important;
 }
 
+
+/* ========================================================
+   MISSION COMPLETE BANNER & HUD TOAST
+   ======================================================== */
+.mission-banner {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+  border: 1px solid #34d399;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.5), 0 8px 24px rgba(0, 0, 0, 0.6);
+  padding: 14px 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 25;
+  animation: bannerSlideDown 0.4s ease-out;
+  pointer-events: none;
+}
+
+@keyframes bannerSlideDown {
+  0% { opacity: 0; transform: translate(-50%, -20px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.mission-banner-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mission-banner-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ecfdf5;
+}
+
+.mission-banner-desc {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+
+.hud-toast {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  padding: 10px 22px;
+  border-radius: 20px;
+  color: #f0f9ff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  animation: toastFade 0.3s ease-out;
+  z-index: 25;
+}
+
+@keyframes toastFade {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ========================================================
+   INVENTORY MODAL & 16-SLOT GRID
+   ======================================================== */
+.inventory-panel {
+  max-width: 680px;
+  width: 95%;
+  background: rgba(11, 20, 31, 0.96);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+}
+
+.inventory-layout {
+  display: flex;
+  gap: 24px;
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .inventory-layout {
+    flex-direction: column;
+  }
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 10px;
+  flex: 1;
+}
+
+.inventory-slot {
+  width: 76px;
+  height: 76px;
+  background: rgba(18, 32, 48, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.inventory-slot:hover {
+  background: rgba(30, 52, 78, 0.85);
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-2px);
+}
+
+.inventory-slot.selected {
+  border: 2px solid #f59e0b;
+  background: rgba(37, 63, 95, 0.95);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+}
+
+.slot-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.slot-name {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  text-align: center;
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-qty {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fef3c7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.slot-empty-num {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.12);
+}
+
+.inventory-details {
+  width: 220px;
+  background: rgba(15, 26, 38, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.empty-details {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-big-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.item-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  color: #fef3c7;
+  letter-spacing: 1px;
+}
+
+.item-count-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.item-desc {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: #cbd5e1;
+}
+
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.inventory-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.inventory-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}

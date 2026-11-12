@@ -5,14 +5,19 @@ import { Ocean } from './world/Ocean';
 import { Foliage } from './world/Foliage';
 import { Rocks } from './world/Rocks';
 import { Shipwreck } from './world/Shipwreck';
+import { CollectiblesManager } from './world/Collectibles';
 import { Player } from './entities/Player';
 import { ThirdPersonCamera } from './entities/ThirdPersonCamera';
 import { InputManager } from './core/InputManager';
 import { CharacterController } from './entities/CharacterController';
+import { Inventory } from './inventory/Inventory';
+import { InventoryUI } from './ui/InventoryUI';
+import { MissionManager } from './missions/MissionManager';
 import { HUD } from './ui/HUD';
 import { MainMenu } from './ui/MainMenu';
-import { SaveSystem, GameSettings, SaveData } from './core/SaveSystem';
+import { SaveSystem, GameSettings, SaveDataV2 } from './core/SaveSystem';
 import { soundManager } from './core/SoundManager';
+import { ResourceType } from './inventory/Item';
 import * as THREE from 'three';
 
 type GameState = 'MENU' | 'PLAYING' | 'PAUSED';
@@ -25,11 +30,16 @@ class GameApp {
   private foliage: Foliage;
   private rocks: Rocks;
   private shipwreck: Shipwreck;
+  private collectiblesManager: CollectiblesManager;
 
   private player: Player;
   private thirdPersonCamera: ThirdPersonCamera;
   private input: InputManager;
   private controller: CharacterController;
+
+  private inventory: Inventory;
+  private inventoryUI: InventoryUI;
+  private missionManager: MissionManager;
 
   private hud: HUD;
   private mainMenu: MainMenu;
@@ -49,6 +59,7 @@ class GameApp {
     this.foliage = new Foliage(this.engine.scene, this.island);
     this.rocks = new Rocks(this.engine.scene, this.island);
     this.shipwreck = new Shipwreck(this.engine.scene, this.island);
+    this.collectiblesManager = new CollectiblesManager(this.engine.scene, this.island);
 
     // Initialize player & controls
     this.player = new Player(this.engine.scene);
@@ -61,16 +72,20 @@ class GameApp {
       this.island
     );
 
-    // Initialize UI
+    // Initialize systems: Inventory, Missions, UI
+    this.inventory = new Inventory();
+    this.inventoryUI = new InventoryUI(this.inventory);
+    this.missionManager = new MissionManager();
     this.hud = new HUD();
     this.mainMenu = new MainMenu();
 
     this.setupUIHandlers();
+    this.setupMissions();
     this.applyLoadedSettings();
 
-    // Re-lock pointer on canvas click if in playing state
+    // Re-lock pointer on canvas click if playing and inventory is not open
     canvas.addEventListener('click', () => {
-      if (this.state === 'PLAYING') {
+      if (this.state === 'PLAYING' && !this.inventoryUI.isOpen()) {
         this.input.requestPointerLock();
       }
     });
@@ -78,6 +93,26 @@ class GameApp {
     // Start render loop
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
+  }
+
+  private setupMissions(): void {
+    this.missionManager.setCallbacks({
+      onProgress: (missionText) => {
+        this.hud.setMission(missionText);
+      },
+      onComplete: (completed, nextMission) => {
+        soundManager.playInteract();
+        this.hud.showMissionComplete(completed.title);
+        if (nextMission) {
+          this.hud.showToast(`New Objective: ${nextMission.title}`);
+        }
+      }
+    });
+
+    // Track distance explored for beach mission
+    this.controller.setOnMoveDistance((dist) => {
+      this.missionManager.recordDistanceTraveled(dist);
+    });
   }
 
   private setupUIHandlers(): void {
@@ -93,15 +128,49 @@ class GameApp {
 
     // Keyboard 'E' Interaction
     this.input.setOnInteract(() => {
-      if (this.state === 'PLAYING') {
+      if (this.state === 'PLAYING' && !this.inventoryUI.isOpen()) {
         this.handlePlayerInteraction();
+      }
+    });
+
+    // Keyboard TAB Inventory Toggle
+    this.input.setOnInventoryToggle(() => {
+      if (this.state === 'PLAYING') {
+        if (this.inventoryUI.isOpen()) {
+          this.inventoryUI.close();
+        } else {
+          this.inventoryUI.open();
+          this.input.exitPointerLock();
+        }
+      }
+    });
+
+    // When inventory closes by UI button
+    this.inventoryUI.setOnClose(() => {
+      if (this.state === 'PLAYING') {
+        this.input.requestPointerLock();
+      }
+    });
+
+    // Inventory Item Consumption (Eat Coconut / Drink Water)
+    this.inventoryUI.setOnUseItem((type: ResourceType, slotIndex: number) => {
+      const result = this.controller.consume(type);
+      if (result.success) {
+        this.inventory.removeAtSlot(slotIndex, 1);
+        this.hud.showToast(result.message);
+      } else {
+        this.hud.showToast(result.message);
       }
     });
 
     // Keyboard ESC Pause Handler
     this.input.setOnPauseToggle(() => {
       if (this.state === 'PLAYING') {
-        this.pauseGame();
+        if (this.inventoryUI.isOpen()) {
+          this.inventoryUI.close();
+        } else {
+          this.pauseGame();
+        }
       } else if (this.state === 'PAUSED') {
         this.resumeGame();
       }
@@ -125,10 +194,14 @@ class GameApp {
     this.controller.spawnOnBeach();
     this.controller.stats = {
       health: 100,
-      hunger: 95,
-      thirst: 90
+      hunger: 100,
+      thirst: 100
     };
-    this.hud.setMission('Search the shoreline for your wrecked expedition ship.');
+    this.inventory.clear();
+    this.collectiblesManager.resetAll();
+    this.shipwreck.setSalvaged(false);
+    this.missionManager.reset();
+    this.hud.setMission(this.missionManager.getCurrentMissionText());
     this.gameTime = 0;
     this.state = 'PLAYING';
     this.hud.show();
@@ -145,7 +218,11 @@ class GameApp {
     soundManager.startOceanAmbience();
     this.controller.setPositionAndRotation(data.playerPosition, data.playerRotation);
     this.controller.stats = { ...data.stats };
-    this.hud.setMission(data.mission || 'Search the shoreline for your wrecked expedition ship.');
+    this.inventory.deserialize(data.inventory);
+    this.collectiblesManager.restoreCollectedIds(data.collectedIds);
+    this.shipwreck.setSalvaged(data.isShipwreckSalvaged);
+    this.missionManager.deserialize(data.mission);
+    this.hud.setMission(this.missionManager.getCurrentMissionText());
     this.gameTime = data.gameTime || 0;
     this.thirdPersonCamera.yaw = data.playerRotation;
 
@@ -167,7 +244,7 @@ class GameApp {
   }
 
   private saveGame(): void {
-    const data: SaveData = {
+    const data: Omit<SaveDataV2, 'version'> = {
       playerPosition: {
         x: this.controller.position.x,
         y: this.controller.position.y,
@@ -175,7 +252,10 @@ class GameApp {
       },
       playerRotation: this.controller.rotationY,
       stats: { ...this.controller.stats },
-      mission: this.hud.getMission(),
+      inventory: this.inventory.serialize(),
+      mission: this.missionManager.serialize(),
+      collectedIds: this.collectiblesManager.getCollectedIds(),
+      isShipwreckSalvaged: this.shipwreck.isSalvaged,
       gameTime: this.gameTime,
       timestamp: Date.now()
     };
@@ -184,30 +264,62 @@ class GameApp {
 
   private quitToMainMenu(): void {
     this.state = 'MENU';
+    if (this.inventoryUI.isOpen()) {
+      this.inventoryUI.close();
+    }
     this.hud.hide();
     this.input.exitPointerLock();
   }
 
   private handlePlayerInteraction(): void {
+    // 1. Check for nearby world collectible resource
+    const nearestItem = this.collectiblesManager.getNearestCollectible(this.controller.position, 2.8);
+    if (nearestItem) {
+      if (!this.inventory.hasFreeSpace(nearestItem.type)) {
+        this.hud.showToast('Inventory full! Cannot collect item.');
+        return;
+      }
+
+      const res = this.inventory.addItem(nearestItem.type, 1);
+      if (res.added > 0) {
+        this.collectiblesManager.collectItem(nearestItem);
+        this.missionManager.recordResourceCollected(nearestItem.type);
+        const resourceName = nearestItem.promptText.replace('Collect ', '');
+        this.hud.showToast(`Collected ${resourceName} (+1)`);
+      }
+      return;
+    }
+
+    // 2. Check for Shipwreck interaction
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
       soundManager.playInteract();
       const message = this.shipwreck.salvage();
-      this.hud.setMission(message);
+      this.missionManager.recordShipwreckInspected();
+      this.hud.showToast(message);
     }
   }
 
   private checkProximityInteractions(): void {
+    // 1. Check for nearby collectible
+    const nearestItem = this.collectiblesManager.getNearestCollectible(this.controller.position, 2.8);
+    if (nearestItem) {
+      this.hud.showInteractionPrompt(nearestItem.promptText);
+      return;
+    }
+
+    // 2. Check for Shipwreck
     const distToShip = this.shipwreck.getInteractionDistance(this.controller.position);
     if (distToShip < 5.0) {
       if (!this.shipwreck.isSalvaged) {
-        this.hud.showInteractionPrompt('Search Shipwreck Cache');
+        this.hud.showInteractionPrompt('Inspect Damaged Ship');
       } else {
         this.hud.showInteractionPrompt('Examine Shipwreck (Searched)');
       }
-    } else {
-      this.hud.hideInteractionPrompt();
+      return;
     }
+
+    this.hud.hideInteractionPrompt();
   }
 
   private loop(): void {
@@ -231,16 +343,22 @@ class GameApp {
       this.engine.camera.position.set(camX, camY, camZ);
       this.engine.camera.lookAt(new THREE.Vector3(42, 4, 25)); // Focus on shipwreck
     } else if (this.state === 'PLAYING') {
-      this.gameTime += deltaTime * 2.0; // Simulated time passage
+      // In-game time passage
+      this.gameTime += deltaTime * 2.0;
 
-      // Handle mouse camera rotation
-      const mouseDeltas = this.input.consumeMouseDeltas();
-      if (this.input.pointerLocked) {
-        this.thirdPersonCamera.updateMouseLook(mouseDeltas.x, mouseDeltas.y);
+      // When inventory modal is open, prevent mouse look and character movement
+      if (!this.inventoryUI.isOpen()) {
+        const mouseDeltas = this.input.consumeMouseDeltas();
+        if (this.input.pointerLocked) {
+          this.thirdPersonCamera.updateMouseLook(mouseDeltas.x, mouseDeltas.y);
+        }
+
+        // Update character movement, animation & survival decay
+        this.controller.update(deltaTime);
+      } else {
+        // Discard mouse delta so camera doesn't jump after closing inventory
+        this.input.consumeMouseDeltas();
       }
-
-      // Update character movement & physics
-      this.controller.update(deltaTime);
 
       // Follow camera
       this.thirdPersonCamera.update(this.controller.position, deltaTime);
@@ -258,4 +376,3 @@ class GameApp {
 window.addEventListener('DOMContentLoaded', () => {
   new GameApp();
 });
-

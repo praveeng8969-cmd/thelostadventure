@@ -4,6 +4,7 @@ import { ThirdPersonCamera } from './ThirdPersonCamera';
 import { InputManager } from '../core/InputManager';
 import { Island } from '../world/Island';
 import { soundManager } from '../core/SoundManager';
+import { ResourceType } from '../inventory/Item';
 
 export interface PlayerStats {
   health: number;
@@ -23,10 +24,14 @@ export class CharacterController {
   private targetRotation: number = 0;
   private stepTimer: number = 0;
 
+  // Survival timers
+  private starvationDamageTimer: number = 0;
+  private onMoveDistanceCallback: ((dist: number) => void) | null = null;
+
   public stats: PlayerStats = {
     health: 100,
-    hunger: 95,
-    thirst: 90
+    hunger: 100,
+    thirst: 100
   };
 
   constructor(
@@ -42,6 +47,10 @@ export class CharacterController {
 
     // Start on the beach near the shipwreck
     this.spawnOnBeach();
+  }
+
+  public setOnMoveDistance(cb: (dist: number) => void): void {
+    this.onMoveDistanceCallback = cb;
   }
 
   public spawnOnBeach(): void {
@@ -87,14 +96,18 @@ export class CharacterController {
         .normalize();
 
       // Position update
-      const newX = this.player.mesh.position.x + moveDir.x * this.currentSpeed * deltaTime;
-      const newZ = this.player.mesh.position.z + moveDir.z * this.currentSpeed * deltaTime;
+      const moveDelta = this.currentSpeed * deltaTime;
+      const newX = this.player.mesh.position.x + moveDir.x * moveDelta;
+      const newZ = this.player.mesh.position.z + moveDir.z * moveDelta;
 
       // Keep within island bounds
       const distFromCenter = Math.hypot(newX, newZ);
       if (distFromCenter < 145) {
         this.player.mesh.position.x = newX;
         this.player.mesh.position.z = newZ;
+        if (this.onMoveDistanceCallback) {
+          this.onMoveDistanceCallback(moveDelta);
+        }
       }
 
       // Smooth rotation toward movement vector
@@ -131,21 +144,65 @@ export class CharacterController {
     this.player.updateAnimation(deltaTime, this.currentSpeed, isSprinting);
 
     // Update survival stats decay
-    this.updateStats(deltaTime, isMoving, isSprinting);
+    this.updateSurvivalStats(deltaTime);
   }
 
-  private updateStats(deltaTime: number, isMoving: boolean, isSprinting: boolean): void {
-    // Hunger & thirst consumption rates per second
-    const hungerDrain = isSprinting ? 0.08 : (isMoving ? 0.03 : 0.015);
-    const thirstDrain = isSprinting ? 0.12 : (isMoving ? 0.045 : 0.02);
+  /**
+   * Survival rules:
+   * - Hunger decreases by 1 every 60 seconds (rate: 1/60 per sec).
+   * - Thirst decreases by 1 every 40 seconds (rate: 1/40 per sec).
+   * - When hunger or thirst is 0, health decreases gradually via rate-limited timer (not every animation frame).
+   * - Clamped between 0 and 100.
+   */
+  private updateSurvivalStats(deltaTime: number): void {
+    // 1 point per 60s for hunger, 1 point per 40s for thirst
+    const hungerRate = 1.0 / 60.0;
+    const thirstRate = 1.0 / 40.0;
 
-    this.stats.hunger = Math.max(0, this.stats.hunger - hungerDrain * deltaTime);
-    this.stats.thirst = Math.max(0, this.stats.thirst - thirstDrain * deltaTime);
+    this.stats.hunger = Math.max(0, Math.min(100, this.stats.hunger - hungerRate * deltaTime));
+    this.stats.thirst = Math.max(0, Math.min(100, this.stats.thirst - thirstRate * deltaTime));
 
-    // Starvation / dehydration hurts health
+    // Health damage when starved or dehydrated (1 damage tick every 2.5 seconds)
     if (this.stats.hunger <= 0 || this.stats.thirst <= 0) {
-      this.stats.health = Math.max(0, this.stats.health - 0.25 * deltaTime);
+      this.starvationDamageTimer += deltaTime;
+      if (this.starvationDamageTimer >= 2.5) {
+        this.starvationDamageTimer = 0;
+        let damage = 0;
+        if (this.stats.hunger <= 0) damage += 1.5;
+        if (this.stats.thirst <= 0) damage += 2.0;
+        this.stats.health = Math.max(0, Math.min(100, this.stats.health - damage));
+      }
+    } else {
+      this.starvationDamageTimer = 0;
     }
+  }
+
+  /**
+   * Consumes an item from inventory to restore stats.
+   * Clamps stats, prevents consumption if stat is already full.
+   */
+  public consume(type: ResourceType): { success: boolean; message: string } {
+    if (type === 'coconut') {
+      if (this.stats.hunger >= 100) {
+        return { success: false, message: 'Hunger is already full!' };
+      }
+      const restore = 20;
+      this.stats.hunger = Math.min(100, this.stats.hunger + restore);
+      soundManager.playInteract();
+      return { success: true, message: `Ate Coconut (+${restore} Hunger)` };
+    }
+
+    if (type === 'water') {
+      if (this.stats.thirst >= 100) {
+        return { success: false, message: 'Thirst is already full!' };
+      }
+      const restore = 30;
+      this.stats.thirst = Math.min(100, this.stats.thirst + restore);
+      soundManager.playInteract();
+      return { success: true, message: `Drank Fresh Water (+${restore} Thirst)` };
+    }
+
+    return { success: false, message: 'This item cannot be consumed.' };
   }
 
   public get position(): THREE.Vector3 {
@@ -162,4 +219,3 @@ export class CharacterController {
     this.targetRotation = rotY;
   }
 }
-

@@ -7,6 +7,7 @@ export class InputManager {
   private targetElement: HTMLElement;
   private onInteractCallback: (() => void) | null = null;
   private onPauseToggleCallback: (() => void) | null = null;
+  private onInventoryToggleCallback: (() => void) | null = null;
 
   constructor(targetElement: HTMLElement) {
     this.targetElement = targetElement;
@@ -26,6 +27,13 @@ export class InputManager {
       if (e.code === 'Escape') {
         if (this.onPauseToggleCallback) {
           this.onPauseToggleCallback();
+        }
+      }
+
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        if (this.onInventoryToggleCallback) {
+          this.onInventoryToggleCallback();
         }
       }
     });
@@ -75,6 +83,10 @@ export class InputManager {
     this.onPauseToggleCallback = cb;
   }
 
+  public setOnInventoryToggle(cb: () => void): void {
+    this.onInventoryToggleCallback = cb;
+  }
+
   public isKeyDown(code: string): boolean {
     return !!this.keys.get(code);
   }
@@ -107,4 +119,3 @@ export class InputManager {
     return this.isPointerLocked;
   }
 }
-

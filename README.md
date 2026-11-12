@@ -1,106 +1,102 @@
-# THE LOST ADVENTURE (v0.1 Prototype)
+# THE LOST ADVENTURE (Version 0.1B)
 
 A 3D browser-based survival adventure game built with Vite, TypeScript, and Three.js.
 
 ## Overview
 A group of friends becomes stranded on a mysterious tropical island after a storm destroys their ship. They must survive, explore abandoned structures, uncover secret military experiments, repair their ship, and escape.
 
-Version 0.1 delivers a fully functional single-player prototype featuring 3D terrain rendering, animated ocean water, atmospheric lighting, foliage & rocks, third-person character locomotion with collision & limb animation, survival status HUD, and an interactive menu system with persistent saves.
+Version 0.1B introduces full resource gathering, a 16-slot stackable inventory system, active hunger and thirst decay, consumable food/water items with stats recovery, sequential introductory missions with event-driven progress tracking, and versioned `localStorage` save/load.
 
 ---
 
-## Features Implemented in v0.1
+## Features in Version 0.1B
 
-### 1. 3D Tropical Island Environment
-- **Procedural Island Heightmap:** Smooth sandy beaches, transition scrublands, lush jungle plateaus, and rocky cliff ridges.
-- **Dynamic Ocean:** Animated vertex wave displacement shader with turquoise-to-deep blue gradients, specular sun highlights, and wave foam tips.
-- **Foliage & Undergrowth:** Procedurally generated coconut palm trees with curved trunks & fronds, tiered jungle canopies, and tropical ferns.
-- **Rocks & Boulders:** Stylized weathered coastal boulders and mountain ridges.
-- **Damaged Shipwreck:** Fractured wooden keel split open on the sandbar, broken mast, snapped yardarm, ripped canvas sail, ship wheel, and scattered cargo debris.
-- **Atmospheric Lighting & Fog:** Soft directional sun with PCF soft shadows, dual-tone hemisphere light, sky dome gradient, and tropical haze distance fog.
+### 1. Resource Gathering
+- **Four Resource Types:**
+  - **Wood:** Driftwood branches and logs washed ashore on the beaches.
+  - **Stone:** Smooth coastal pebbles and volcanic stones.
+  - **Coconut:** Fallen coconuts under coastal palm groves.
+  - **Fresh Water:** An inland natural rock spring oasis basin.
+- **Proximity Detection & Prompts:**
+  - Approaching collectibles displays: `[E] Collect Wood`, `[E] Collect Stone`, `[E] Collect Coconut`, `[E] Collect Water`.
+  - Pressing `E` collects the resource, adds it to the inventory, plays an interaction chime, and deactivates the world object.
+  - Items cannot be collected repeatedly, and collected states persist across saves.
 
-### 2. Third-Person Character Locomotion
-- **Controls:** WASD movement oriented to the camera's perspective.
-- **Sprinting:** Hold `Left Shift` to sprint (with increased stride, forward lean, and higher thirst/hunger consumption).
-- **Mouse Camera:** Smooth orbit follow camera with pitch clamping and terrain collision clearance.
-- **Terrain Collision:** Exact height clamping with shallow water wading resistance.
-- **Limb Animation:** Procedural walking, sprinting, and idle breathing animations.
-- **Synthesized Audio:** Procedural Web Audio API for ocean waves, footstep rustling on sand, and interaction chimes without external network asset dependencies.
+### 2. 16-Slot Survivor Inventory (`Tab`)
+- **Grid Layout:** 4x4 grid (16 slots) displaying item icons, names, and quantity badges.
+- **Stackable Resources:** Stack limits (Wood & Stone up to 20; Coconut & Fresh Water up to 10).
+- **Inspection & Actions:**
+  - Select any item to view its description and current count.
+  - **Use:** Eat Coconuts or Drink Water to restore survival meters.
+  - **Discard:** Drop/remove items one by one.
+- **Seamless Pointer Lock:** Opening the inventory automatically frees the cursor; closing it or pressing `Tab`/`ESC` re-engages camera look.
 
-### 3. Survival HUD
-- Real-time **Health**, **Hunger**, and **Thirst** status meters.
-- Current mission display (starts with exploring the shoreline for the wreckage, updates upon salvaging the ship's cache).
-- World coordinate tracking and in-game day clock.
-- Contextual interaction prompt when near items (`[E] Search Shipwreck Cache`).
+### 3. Survival Simulation
+- **Initial Values:** Health: 100, Hunger: 100, Thirst: 100.
+- **Controlled Decay:**
+  - Hunger decreases by 1 point every 60 seconds (1/60s).
+  - Thirst decreases by 1 point every 40 seconds (1/40s).
+- **Damage Rate-Limiting:** If Hunger or Thirst drops to 0, health decreases gradually via a rate-limited damage tick (not every animation frame).
+- **Pause Safety:** All survival decay pauses when the game is paused.
+- **Clamped Bounds:** All stats are strictly bounded between 0 and 100.
 
-### 4. Main Menu, Pause Menu & Save System
-- **Start Adventure:** Initiates a new expedition on the beach.
-- **Continue Journey:** Reads save data from `localStorage` (player location, rotation, survival stats, mission progress). Only active when a save file exists.
-- **Controls Guide:** Comprehensive dialog explaining inputs and mechanics.
-- **Settings:** Sliders for Master Audio Volume, Mouse Sensitivity, Field of View (FOV), and Shadow Detail (High, Low, Off).
-- **In-Game Pause (`ESC`):** Pause menu offering Resume, Save Game, Settings, and Return to Main Menu.
+### 4. Consumables & Feedback
+- **Coconut:** Restores 20 Hunger.
+- **Fresh Water:** Restores 30 Thirst.
+- **Safety Checks:** Prevents consumption if the relevant stat is already at 100% (with toast feedback: "Hunger is already full!").
+- Consuming an item deducts 1 from its inventory stack and updates HUD bars immediately.
 
----
+### 5. Sequential Introductory Missions
+Tracks valid gameplay events (survives item consumption/spending and credits prior gatherings):
+1. **Explore the beach** (walk along the shoreline)
+2. **Collect 5 wood** (`Wood 0/5` -> `Wood 5/5`)
+3. **Collect 3 stones** (`Stone 0/3` -> `Stone 3/3`)
+4. **Find 2 coconuts** (`Coconuts 0/2` -> `Coconuts 2/2`)
+5. **Collect drinking water** (`Fresh Water 0/1`)
+6. **Inspect the damaged ship** (approach and salvage the emergency cache)
 
-## Project Structure
+Features an animated **Mission Complete** banner, audio cue, and automatic progression to the next objective.
 
-```
-The Lost Adventure/
-├── index.html                   # HTML entry point, HUD markup, Menu & Modals
-├── package.json                 # Project dependencies & scripts
-├── tsconfig.json                # TypeScript compiler configuration
-├── vite.config.ts               # Vite bundler configuration
-├── src/
-│   ├── main.ts                  # Central coordinator & game loop
-│   ├── style.css                # Adventure survival theme UI stylesheet
-│   ├── core/
-│   │   ├── Engine.ts            # Three.js scene, camera, renderer, shadows & resize
-│   │   ├── InputManager.ts      # Keyboard, mouse look, pointer lock, sensitivity
-│   │   ├── SaveSystem.ts        # localStorage serialization for game & settings
-│   │   └── SoundManager.ts      # Procedural Web Audio synthesis (ocean, steps, SFX)
-│   ├── world/
-│   │   ├── Island.ts            # Mathematical island terrain & height collision
-│   │   ├── Ocean.ts             # Custom wave displacement shader & water reflections
-│   │   ├── Atmosphere.ts        # Sun lighting, sky dome, and distance fog
-│   │   ├── Foliage.ts           # Palm trees, jungle canopies, and tropical ferns
-│   │   ├── Rocks.ts             # Coastal boulders & mountain rock formations
-│   │   └── Shipwreck.ts         # Storm-wrecked ship, cargo crates & salvage chest
-│   ├── entities/
-│   │   ├── Player.ts            # Articulated character model & procedural animations
-│   │   ├── ThirdPersonCamera.ts # Orbit spring camera with terrain clearance
-│   │   └── CharacterController.ts # Movement physics, stats decay, footstep timing
-│   └── ui/
-│       ├── HUD.ts               # Survival meters, mission prompt, interaction toast
-│       └── MainMenu.ts          # Start, Continue, Controls modal, Settings modal & Pause
-└── dist/                        # Production build output
-```
+### 6. Versioned Save / Load System (v2)
+- Serializes player coordinates, rotation, survival stats, 16 inventory slots, mission progress, collected item IDs, and shipwreck state to `localStorage`.
+- Graceful backward compatibility with v1 prototype saves and corruption resilience.
+- Continue Journey button automatically enables when save data exists.
 
 ---
 
-## How to Launch and Test
+## Controls
 
-1. **Start Development Server:**
+| Key / Input | Action |
+| :--- | :--- |
+| **W, A, S, D** | Walk & directional movement |
+| **Left Shift** | Sprint (faster movement) |
+| **Mouse** | Camera orbit & mouse look |
+| **E** | Collect resources & interact with shipwreck |
+| **TAB** | Open / Close 16-slot inventory |
+| **ESC** | Open Pause Menu (Save, Settings, Resume, Quit) |
+
+---
+
+## How to Run & Test Locally
+
+1. **Start Vite Dev Server:**
    ```bash
    npm run dev
    ```
-   Open your browser at `http://localhost:3000`.
+   Open `http://localhost:3000` in your browser.
 
-2. **In the Main Menu:**
-   - Click **Controls** to review keys.
-   - Click **Settings** to adjust volume, sensitivity, FOV, or shadow quality.
-   - Click **Start Adventure** to spawn on the beach.
+2. **Manual Test Checklist:**
+   - [x] Click **Start Adventure**.
+   - [x] Walk across the beach to complete Mission 1 ("Explore the beach").
+   - [x] Pick up 5 wood branches along the shore with `E` to complete Mission 2.
+   - [x] Press `Tab` to verify 16-slot inventory slots, icons, and quantities.
+   - [x] Gather 3 stones and 2 coconuts with `E`.
+   - [x] Open inventory (`Tab`), select Coconut, and click "Use" to restore hunger (note: if full, it will notify "Hunger is already full!").
+   - [x] Journey inland to the freshwater spring oasis (LOC: ~2, -12), collect water, and drink to verify thirst replenishment.
+   - [x] Inspect the shipwreck to complete the final introductory mission.
+   - [x] Press `ESC`, click **Save Game**, return to the main menu, and click **Continue Journey** to verify persistence.
 
-3. **In the Game:**
-   - Click anywhere to lock the mouse cursor.
-   - Use **WASD** to move and **Shift** to sprint.
-   - Move the **Mouse** to look around.
-   - Approach the damaged shipwreck on the beach and press **E** to salvage the emergency cache.
-   - Press **ESC** at any time to open the pause menu and click **Save Game**.
-   - Return to the Main Menu and test the newly enabled **Continue Journey** button to resume your saved session!
-
-4. **Production Build:**
+3. **Production Build:**
    ```bash
    npm run build
-   npm run preview
    ```
-

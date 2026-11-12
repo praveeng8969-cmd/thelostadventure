@@ -15,7 +15,13 @@ export class HUD {
   private interactionPrompt: HTMLElement;
   private interactionLabel: HTMLElement;
 
-  private currentMission: string = 'Explore the shoreline and locate your shipwreck.';
+  private toastEl: HTMLElement;
+  private missionBannerEl: HTMLElement;
+  private missionBannerDesc: HTMLElement;
+  private toastTimeout: number | null = null;
+  private bannerTimeout: number | null = null;
+
+  private currentMission: string = 'Explore the beach.';
 
   constructor() {
     this.container = document.getElementById('hud-container')!;
@@ -30,6 +36,10 @@ export class HUD {
     this.timeText = document.getElementById('hud-time')!;
     this.interactionPrompt = document.getElementById('hud-interaction')!;
     this.interactionLabel = document.getElementById('interaction-text')!;
+
+    this.toastEl = document.getElementById('hud-toast')!;
+    this.missionBannerEl = document.getElementById('mission-complete-banner')!;
+    this.missionBannerDesc = document.getElementById('mission-complete-desc')!;
   }
 
   public show(): void {
@@ -86,5 +96,26 @@ export class HUD {
   public hideInteractionPrompt(): void {
     this.interactionPrompt.classList.add('hidden');
   }
-}
 
+  public showToast(msg: string): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+    this.toastEl.innerText = msg;
+    this.toastEl.classList.remove('hidden');
+    this.toastTimeout = window.setTimeout(() => {
+      this.toastEl.classList.add('hidden');
+    }, 2800);
+  }
+
+  public showMissionComplete(completedTitle: string): void {
+    if (this.bannerTimeout) {
+      clearTimeout(this.bannerTimeout);
+    }
+    this.missionBannerDesc.innerText = completedTitle;
+    this.missionBannerEl.classList.remove('hidden');
+    this.bannerTimeout = window.setTimeout(() => {
+      this.missionBannerEl.classList.add('hidden');
+    }, 4500);
+  }
+}

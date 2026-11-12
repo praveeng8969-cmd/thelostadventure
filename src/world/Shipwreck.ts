@@ -187,5 +187,13 @@ export class Shipwreck {
     }
     return "The emergency cache has already been searched.";
   }
+
+  public setSalvaged(salvaged: boolean): void {
+    if (this.isSalvaged === salvaged) return;
+    this.isSalvaged = salvaged;
+    if (salvaged) {
+      this.salvageChest.rotation.y += 0.35;
+    }
+  }
 }
 
