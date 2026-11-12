@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SurvivorVisual } from './SurvivorVisual';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export type CharacterAnimState = 'IDLE' | 'WALK' | 'RUN' | 'SPRINT';
 
