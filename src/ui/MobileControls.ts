@@ -27,9 +27,9 @@ export class MobileControls {
       <div class="mobile-top-actions">
         <button type="button" data-action="inventory">BAG</button>
         <button type="button" data-action="craft">CRAFT</button>
-        <button type="button" data-action="pause">PAUSE</button>
+        <button type="button" data-action="pause">PAUSE</button>\n        <button type="button" data-action="help">HELP</button>
       </div>`;
-    document.body.append(this.root);
+    document.getElementById('game-container')!.append(this.root);
     this.stick = this.root.querySelector('.mobile-stick')!;
     this.nub = this.root.querySelector('.mobile-stick-nub')!;
     this.look = this.root.querySelector('.mobile-look')!;
@@ -102,6 +102,8 @@ export class MobileControls {
         if (action === 'sprint') {
           button.setPointerCapture(e.pointerId);
           this.input.setTouchSprint(true);
+        } else if (action === 'help') {
+          document.body.classList.toggle('mobile-help-open');
         } else {
           this.input.triggerAction(action);
         }
