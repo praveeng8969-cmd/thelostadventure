@@ -1169,3 +1169,33 @@ body, html {
   .mobile-top-actions { z-index: 40; }
   .hud-controls-helper { pointer-events: auto; }
 }
+
+/* Expedition character picker — fits the existing desktop and landscape menu. */
+.character-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.65rem auto 1rem;
+  width: min(100%, 390px);
+  color: #e5dfc7;
+}
+.character-picker label {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+}
+.character-picker select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.6rem;
+  color: #fff;
+  background: rgba(13, 30, 28, 0.94);
+  border: 1px solid rgba(205, 179, 116, 0.55);
+  border-radius: 6px;
+  font: inherit;
+}
+.character-picker-hint {
+  font-size: 0.72rem;
+  color: #b9c6bd;
+}
