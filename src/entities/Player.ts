@@ -14,6 +14,7 @@ export class Player {
   private legBones: THREE.Bone[] = [];
   private armBones: THREE.Bone[] = [];
   private elapsed = 0;
+  private characterRequest = 0;
   private rightHandBone: THREE.Object3D | null = null;
   private equippedAxeGroup: THREE.Group | null = null;
 
@@ -28,9 +29,11 @@ export class Player {
     this.rightHandBone = this.survivor.rightHand;
     this.isLoaded = true;
     this.loadExpeditionModel();
+    window.addEventListener('tla-character-change', () => this.loadExpeditionModel());
   }
 
   private loadExpeditionModel(): void {
+    const request = ++this.characterRequest;
     // The bundled Soldier.glb contains real skinned geometry and authored
     // Idle/Walk/Run animation clips. Prefer it over the unanimated civilian.
     // Both remain available as independently selectable character appearances.
@@ -39,6 +42,7 @@ export class Player {
       ? '/models/characters/casual-character.glb'
       : '/models/Soldier.glb';
     new GLTFLoader().load(path, gltf => {
+      if (request !== this.characterRequest) return;
       const model = gltf.scene;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
@@ -47,6 +51,20 @@ export class Player {
       const scale = 2.05 / size.y;
       model.scale.setScalar(scale);
       model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+      if (this.importedModel) {
+        this.mesh.remove(this.importedModel);
+        this.importedModel.traverse(object => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry?.dispose();
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.forEach(material => material?.dispose());
+          }
+        });
+      }
+      this.mixer?.stopAllAction();
+      this.mixer = null;
+      this.animations.clear();
+      this.activeAnimation = null;
       this.rightHandBone = null;
       this.legBones.length = 0;
       this.armBones.length = 0;
@@ -95,6 +113,7 @@ export class Player {
       console.info('[Player] Loaded textured, skinned character:', selected,
         'animation clips:', gltf.animations.map(clip => clip.name));
     }, undefined, error => {
+      if (request !== this.characterRequest) return;
       if (selected === 'expedition') {
         // If the detailed bundled model fails, try the civilian before
         // resorting to the lightweight procedural fallback.
