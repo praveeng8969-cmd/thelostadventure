@@ -31,7 +31,14 @@ export class Player {
   }
 
   private loadExpeditionModel(): void {
-    new GLTFLoader().load('/models/characters/casual-character.glb', gltf => {
+    // The bundled Soldier.glb contains real skinned geometry and authored
+    // Idle/Walk/Run animation clips. Prefer it over the unanimated civilian.
+    // Both remain available as independently selectable character appearances.
+    const selected = localStorage.getItem('tla_character') === 'civilian' ? 'civilian' : 'expedition';
+    const path = selected === 'civilian'
+      ? '/models/characters/casual-character.glb'
+      : '/models/Soldier.glb';
+    new GLTFLoader().load(path, gltf => {
       const model = gltf.scene;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
@@ -41,15 +48,19 @@ export class Player {
       model.scale.setScalar(scale);
       model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
       this.rightHandBone = null;
+      this.legBones.length = 0;
+      this.armBones.length = 0;
       model.traverse(obj => {
         if (obj instanceof THREE.Mesh) {
           obj.castShadow = true;
           obj.receiveShadow = true;
+          // Retain imported texture and PBR details; avoid replacing them
+          // with flat-colour placeholder materials.
         }
         if (obj instanceof THREE.Bone) {
           const name = obj.name.toLowerCase();
-          if (/right.*hand|hand.*right/.test(name)) this.rightHandBone = obj;
-          if (/thigh|upper.?leg/.test(name)) this.legBones.push(obj);
+          if (/right.*hand|hand.*right|hand_r/.test(name)) this.rightHandBone = obj;
+          if (/thigh|upper.?leg|upleg/.test(name)) this.legBones.push(obj);
           if (/upper.?arm|shoulder/.test(name)) this.armBones.push(obj);
         }
       });
@@ -61,23 +72,38 @@ export class Player {
         for (const clip of gltf.animations) {
           this.animations.set(clip.name.toLowerCase(), this.mixer.clipAction(clip));
         }
+        const idle = [...this.animations.entries()].find(([name]) => name.includes('idle'))?.[1];
+        if (idle) {
+          idle.play();
+          this.activeAnimation = idle;
+        }
       }
       if (this.equippedAxeGroup) {
         const axe = this.equippedAxeGroup;
         axe.removeFromParent();
-        const importedHand = this.rightHandBone as THREE.Object3D | null;
-        if (importedHand) {
-          axe.position.set(0, 0.02, 0);
+        const hand = this.rightHandBone as THREE.Object3D | null;
+        if (hand) {
+          axe.position.set(0.01, -0.06, 0.02);
           axe.rotation.set(-Math.PI / 2, 0, Math.PI / 4);
           axe.scale.setScalar(0.65);
-          importedHand.add(axe);
+          hand.add(axe);
         } else {
           axe.position.set(0.35, 0.8, 0.2);
           this.mesh.add(axe);
         }
       }
-      console.info('[Player] Quaternius civilian explorer GLB loaded.');
-    }, undefined, err => console.warn('[Player] Civilian GLB unavailable; using procedural explorer.', err));
+      console.info('[Player] Loaded textured, skinned character:', selected,
+        'animation clips:', gltf.animations.map(clip => clip.name));
+    }, undefined, error => {
+      if (selected === 'expedition') {
+        // If the detailed bundled model fails, try the civilian before
+        // resorting to the lightweight procedural fallback.
+        localStorage.setItem('tla_character', 'civilian');
+        this.loadExpeditionModel();
+      } else {
+        console.warn('[Player] Character models unavailable; using fallback.', error);
+      }
+    });
   }
 
   public setEquippedTool(tool: 'stone_axe' | null): void {
