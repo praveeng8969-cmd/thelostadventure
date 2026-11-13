@@ -66,6 +66,14 @@ export class MainMenu {
     this.btnSaveSettings = document.getElementById('btn-save-settings') as HTMLButtonElement;
     this.btnResetSettings = document.getElementById('btn-reset-settings') as HTMLButtonElement;
 
+    const characterChoice = document.getElementById('character-choice') as HTMLSelectElement | null;
+    if (characterChoice) {
+      characterChoice.value = localStorage.getItem('tla_character') === 'civilian' ? 'civilian' : 'expedition';
+      characterChoice.addEventListener('change', () => {
+        localStorage.setItem('tla_character', characterChoice.value);
+        window.dispatchEvent(new Event('tla-character-change'));
+      });
+    }
     this.initEvents();
     this.updateContinueButtonState();
     this.loadInitialSettings();
