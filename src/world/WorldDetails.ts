@@ -6,19 +6,43 @@ export class WorldDetails {
   public group = new THREE.Group();
 
   constructor(scene: THREE.Scene, island: Island) {
-    const grassGeometry = new THREE.ConeGeometry(0.13, 0.7, 3);
-    grassGeometry.translate(0, 0.35, 0);
+    // Crossed tapered grass blades: the former 3-sided cones looked like
+    // miniature trees. Thin crossed blades create an organic grass silhouette.
+    const vertices: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (let blade = 0; blade < 3; blade++) {
+      const angle = blade * Math.PI / 3;
+      const dx = Math.cos(angle), dz = Math.sin(angle);
+      const start = vertices.length / 3;
+      const bend = (blade - 1) * 0.075;
+      vertices.push(
+        -dx * 0.115, 0, -dz * 0.115,
+         dx * 0.115, 0,  dz * 0.115,
+        -dx * 0.05 + bend, 0.46, -dz * 0.05,
+         dx * 0.05 + bend, 0.46,  dz * 0.05,
+         bend * 1.6, 0.74, 0.025
+      );
+      uvs.push(0, 0, 1, 0, 0.2, 0.65, 0.8, 0.65, 0.5, 1);
+      indices.push(start, start + 1, start + 2, start + 1, start + 3, start + 2,
+        start + 2, start + 3, start + 4);
+    }
+    const grassGeometry = new THREE.BufferGeometry();
+    grassGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    grassGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    grassGeometry.setIndex(indices);
+    grassGeometry.computeVertexNormals();
     const grassMaterial = new THREE.MeshStandardMaterial({
       color: 0x587342, roughness: 1, side: THREE.DoubleSide
     });
-    const grass = new THREE.InstancedMesh(grassGeometry, grassMaterial, 1300);
+    const grass = new THREE.InstancedMesh(grassGeometry, grassMaterial, 5500);
     const dummy = new THREE.Object3D();
     const color = new THREE.Color();
     let count = 0;
     // Deterministic scatter, preserving the open starting beach.
-    for (let i = 0; i < 2300 && count < 1300; i++) {
+    for (let i = 0; i < 9000 && count < 5500; i++) {
       const a = i * 2.399963;
-      const r = Math.sqrt((i + 0.5) / 2300) * 126;
+      const r = Math.sqrt((i + 0.5) / 9000) * 126;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
       const y = island.getHeightAt(x, z);
@@ -27,7 +51,7 @@ export class WorldDetails {
       if (noise < 0.25) continue;
       dummy.position.set(x, y - 0.02, z);
       dummy.rotation.set(0, a, 0.08 * Math.sin(i));
-      const size = 0.4 + noise * 1.3;
+      const size = 0.35 + noise * 1.25;
       dummy.scale.set(size, size * (0.6 + noise), size);
       dummy.updateMatrix();
       grass.setMatrixAt(count, dummy.matrix);
@@ -38,7 +62,7 @@ export class WorldDetails {
     grass.count = count;
     grass.instanceMatrix.needsUpdate = true;
     if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
-    grass.frustumCulled = false;
+    grass.computeBoundingSphere();
     grass.castShadow = false;
     grass.receiveShadow = false;
     this.group.add(grass);
